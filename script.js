@@ -894,6 +894,4 @@ const cluesJSON = [
                 }
             }
         }
-    </script>
-</body>
-</html>
+
