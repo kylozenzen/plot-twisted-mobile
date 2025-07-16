@@ -870,4 +870,30 @@ const cluesJSON = [
             markClueAsSeen(category, title) {
                 try {
                     if (this.state.currentGameMode === 'daily') return; // Don't track seen clues for daily challenge
-                    const seen = this.getSeenClues(categor
+                    const seen = this.getSeenClues(category);
+                    if (!seen.includes(title)) {
+                        seen.push(title);
+                        localStorage.setItem(`seenClues_${category}`, JSON.stringify(seen));
+                    }
+                } catch (e) {
+                    console.error("Could not save seen clue to localStorage", e);
+                }
+            }
+
+            getAvailableClues(category) {
+                const allInCategory = this.categoryData.get(category).clues;
+                const seenInCategory = this.getSeenClues(category);
+                return allInCategory.filter(clue => !seenInCategory.includes(clue.title));
+            }
+
+            resetSeenClues(category) {
+                try {
+                    localStorage.removeItem(`seenClues_${category}`);
+                } catch (e) {
+                    console.error("Could not reset seen clues in localStorage", e);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
