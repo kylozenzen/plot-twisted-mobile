@@ -217,681 +217,231 @@ const cluesJSON = [
     { "title": "Only Murders in the Building", "clue": "Three true-crime podcast enthusiasts who live in the same apartment building team up to solve a murder.", "category": "Streaming Hits", "emoji": "📺" }
         ];
 
-        // --- GAME LOGIC ---
-        document.addEventListener('DOMContentLoaded', () => {
-            const game = new PlotTwistedGame();
-            game.init();
+
+// --- GAME LOGIC ---
+document.addEventListener('DOMContentLoaded', () => {
+    const game = new PlotTwistedGame();
+    game.init();
+});
+
+class PlotTwistedGame {
+    constructor() {
+        this.allClues = [];
+        this.categoryData = new Map();
+        this.dom = {};
+        this.state = {
+            currentScreen: 'start',
+            currentGameMode: 'standard',
+            selectedCategory: null,
+            lastPlayedCategory: '',
+            gameQuestions: [],
+            currentQuestionIndex: 0,
+            playedQuestions: [],
+            totalScore: 0,
+            currentAnswer: '',
+            guessedLetters: [],
+            isRoundOver: false,
+            strikesLeft: 3
+        };
+        this.settings = { darkMode: false, neonTheme: false, sound: false, numRounds: 5 };
+        this.keyLayout = ['QWERTYUIOP'.split(''), 'ASDFGHJKL'.split(''), 'ZXCVBNM'.split('')];
+        this.synths = {};
+        this.recognition = null;
+        this.isListening = false;
+        this._randomSeed = 0;
+    }
+
+    init() {
+        this.allClues = cluesJSON;
+        this.cacheDomElements();
+        this.processCluesIntoCategories();
+        this.loadSettings();
+        this.applySettingsToUI();
+        this.bindEventListeners();
+        this.renderCategoryScreen();
+        this.checkDailyChallengeStatus();
+        this.showScreen('start');
+    }
+
+    getEl(id) { const el = document.getElementById(id); if (!el) console.warn(`Element with ID '${id}' not found.`); return el; }
+
+    cacheDomElements() {
+        this.dom = {
+            screens: {
+                start: this.getEl('startScreen'),
+                moreModes: this.getEl('moreModesScreen'),
+                settings: this.getEl('settingsScreen'),
+                category: this.getEl('categoryScreen'),
+                game: this.getEl('gameScreen'),
+                gameOver: this.getEl('gameOverScreen'),
+                credits: this.getEl('creditsScreen'),
+                dailyChallenge: this.getEl('dailyChallengeScreen'),
+                howToPlay: this.getEl('howToPlayScreen')
+            },
+            buttons: {
+                startGameBtn: this.getEl('startGameBtn'),
+                dailyChallengeBtn: this.getEl('dailyChallengeBtn'),
+                moreModesBtn: this.getEl('moreModesBtn'),
+                settingsBtn: this.getEl('settingsBtn'),
+                howToPlayBtn: this.getEl('howToPlayBtn'),
+                dailyChallengeBackBtn: this.getEl('dailyChallengeBackBtn'),
+                moreModesBackBtn: this.getEl('moreModesBackBtn'),
+                settingsBackBtn: this.getEl('settingsBackBtn'),
+                howToPlayBackBtn: this.getEl('howToPlayBackBtn'),
+                playBtn: this.getEl('playBtn'),
+                categoryBackToHomeBtn: this.getEl('categoryBackToHomeBtn'),
+                finishGameBtn: this.getEl('finishGameBtn'),
+                playAgainBtn: this.getEl('playAgainBtn'),
+                chooseNewCategoryBtn: this.getEl('chooseNewCategoryBtn'),
+                gameOverBackToHomeBtn: this.getEl('gameOverBackToHomeBtn'),
+                viewCreditsBtn: this.getEl('viewCreditsBtn'),
+                creditsBackBtn: this.getEl('creditsBackBtn'),
+                speakBtn: this.getEl('speakBtn'),
+                skipBtn: this.getEl('skipBtn'),
+                continueBtn: this.getEl('continueBtn'),
+                confirmQuitBtn: this.getEl('confirmQuitBtn'),
+                cancelQuitBtn: this.getEl('cancelQuitBtn'),
+                shareScoreBtn: this.getEl('shareScoreBtn')
+            },
+            displays: {
+                gameProgressDisplay: this.getEl('gameProgressDisplay'),
+                gameScoreDisplay: this.getEl('gameScoreDisplay'),
+                strikesDisplay: this.getEl('strikesDisplay'),
+                clueText: this.getEl('clueText'),
+                wordDisplay: document.querySelector('.word-display'),
+                gameOverTitle: this.getEl('gameOverTitle'),
+                finalScore: this.getEl('finalScore'),
+                scoreBreakdown: this.getEl('scoreBreakdown'),
+                creditsContent: this.getEl('creditsContent')
+            },
+            containers: {
+                categoryGrid: document.querySelector('.category-grid'),
+                keyboard: this.getEl('keyboard'),
+                continueOverlay: this.getEl('continue-overlay'),
+                confirmModal: this.getEl('confirmModal'),
+                screenBox: document.querySelector('.screen-box')
+            },
+            settingsToggles: {
+                darkMode: this.getEl('darkModeToggle'),
+                neonTheme: this.getEl('neonThemeToggle'),
+                sound: this.getEl('soundToggle'),
+                gameLength: this.getEl('gameLengthSelector')
+            }
+        };
+    }
+
+    processCluesIntoCategories() {
+        const categories = ["Family","Sci-Fi","Superhero","Fantasy","Emotional Damage","Streaming Hits"];
+        this.categoryData.clear();
+        categories.forEach(name => {
+            const first = this.allClues.find(c => c.category===name);
+            if (first) this.categoryData.set(name,{name,clues:this.allClues.filter(c=>c.category===name),emoji:first.emoji});
         });
+    }
 
-        class PlotTwistedGame {
-            constructor() {
-                this.allClues = [];
-                this.categoryData = new Map();
-                this.dom = {};
-                this.state = {
-                    currentScreen: 'start',
-                    currentGameMode: 'standard',
-                    selectedCategory: null,
-                    lastPlayedCategory: '',
-                    gameQuestions: [], 
-                    currentQuestionIndex: 0, 
-                    playedQuestions: [], 
-                    totalScore: 0, 
-                    currentAnswer: '',
-                    guessedLetters: [], 
-                    isRoundOver: false,
-                    strikesLeft: 3,
-                };
-                this.settings = { 
-                    darkMode: false,
-                    neonTheme: false,
-                    sound: false, 
-                    numRounds: 5 
-                };
-                this.keyLayout = [ 'QWERTYUIOP'.split(''), 'ASDFGHJKL'.split(''), 'ZXCVBNM'.split('') ];
-                this.synths = {};
-                this.recognition = null;
-                this.isListening = false;
-                this._randomSeed = 0;
-            }
+    loadSettings(){
+        const s=localStorage.getItem('plotTwistedSettings');
+        if(s)Object.assign(this.settings,JSON.parse(s));
+    }
+    saveSettings(){localStorage.setItem('plotTwistedSettings',JSON.stringify(this.settings));}
 
-            init() {
-                this.allClues = cluesJSON;
-                this.cacheDomElements();
-                this.processCluesIntoCategories();
-                this.loadSettings();
-                this.applySettingsToUI();
-                this.bindEventListeners();
-                this.renderCategoryScreen();
-                this.checkDailyChallengeStatus();
-                this.showScreen('start');
-            }
+    applySettingsToUI(){
+        document.body.classList.toggle('dark-mode',this.settings.darkMode);
+        document.body.classList.toggle('neon-theme',this.settings.neonTheme);
+        this.dom.settingsToggles.darkMode.classList.toggle('active',this.settings.darkMode);
+        this.dom.settingsToggles.neonTheme.classList.toggle('active',this.settings.neonTheme);
+        this.dom.settingsToggles.sound.classList.toggle('active',this.settings.sound);
+        if(this.settings.sound)ensureTone(this);
+        this.dom.settingsToggles.gameLength.querySelectorAll('.length-btn').forEach(btn=>btn.classList.toggle('selected',parseInt(btn.dataset.count)===this.settings.numRounds));
+    }
 
-            getEl(id) {
-                const el = document.getElementById(id);
-                if (!el) console.warn(`Element with ID '${id}' not found.`);
-                return el;
-            }
+    bindEventListeners(){
+        const listeners=[
+            {el:this.dom.buttons.startGameBtn,fn:()=>this.showScreen('category')},
+            {el:this.dom.buttons.settingsBtn,fn:()=>this.showScreen('settings')},
+            {el:this.dom.buttons.howToPlayBtn,fn:()=>this.showScreen('howToPlay')},
+            {el:this.dom.buttons.dailyChallengeBtn,fn:()=>this.startDailyChallenge()},
+            {el:this.dom.buttons.moreModesBtn,fn:()=>this.showScreen('moreModes')},
+            {el:this.dom.buttons.settingsBackBtn,fn:()=>this.showScreen('start')},
+            {el:this.dom.buttons.howToPlayBackBtn,fn:()=>this.showScreen('start')},
+            {el:this.dom.buttons.dailyChallengeBackBtn,fn:()=>this.showScreen('start')},
+            {el:this.dom.buttons.moreModesBackBtn,fn:()=>this.showScreen('start')},
+            {el:this.dom.buttons.categoryBackToHomeBtn,fn:()=>this.showScreen('start')},
+            {el:this.dom.buttons.gameOverBackToHomeBtn,fn:()=>this.showScreen('start')},
+            {el:this.dom.buttons.creditsBackBtn,fn:()=>this.showScreen('gameOver')},
+            {el:this.dom.buttons.playBtn,fn:()=>this.startGame()},
+            {el:this.dom.buttons.skipBtn,fn:()=>this.skipQuestion()},
+            {el:this.dom.buttons.continueBtn,fn:()=>this.nextQuestion()},
+            {el:this.dom.buttons.finishGameBtn,fn:()=>this.dom.containers.confirmModal.classList.add('active')},
+            {el:this.dom.buttons.speakBtn,fn:()=>this.toggleSpeechRecognition()},
+            {el:this.dom.buttons.playAgainBtn,fn:()=>this.playAgain()},
+            {el:this.dom.buttons.chooseNewCategoryBtn,fn:()=>this.showScreen('category')},
+            {el:this.dom.buttons.viewCreditsBtn,fn:()=>this.showCredits()},
+            {el:this.dom.buttons.shareScoreBtn,fn:()=>this.shareDailyScore()},
+            {el:this.dom.buttons.confirmQuitBtn,fn:()=>{this.dom.containers.confirmModal.classList.remove('active');this.endGame(true);}},
+            {el:this.dom.buttons.cancelQuitBtn,fn:()=>this.dom.containers.confirmModal.classList.remove('active')}
+        ];listeners.forEach(({el,fn})=>{if(el)el.addEventListener('click',fn)});
+        if(this.dom.containers.categoryGrid)this.dom.containers.categoryGrid.addEventListener('click',e=>{const b=e.target.closest('.category-btn');if(b)this.selectCategory(b.dataset.category)});
+    }
 
-            cacheDomElements() {
-                this.dom = {
-                    screens: { 
-                        start: this.getEl('startScreen'), 
-                        moreModes: this.getEl('moreModesScreen'),
-                        settings: this.getEl('settingsScreen'),
-                        category: this.getEl('categoryScreen'), 
-                        game: this.getEl('gameScreen'), 
-                        gameOver: this.getEl('gameOverScreen'),
-                        credits: this.getEl('creditsScreen'),
-                        dailyChallenge: this.getEl('dailyChallengeScreen'),
-                        howToPlay: this.getEl('howToPlayScreen'),
-                    },
-                    buttons: {
-                        startGameBtn: this.getEl('startGameBtn'),
-                        dailyChallengeBtn: this.getEl('dailyChallengeBtn'),
-                        moreModesBtn: this.getEl('moreModesBtn'),
-                        settingsBtn: this.getEl('settingsBtn'),
-                        howToPlayBtn: this.getEl('howToPlayBtn'),
-                        dailyChallengeBackBtn: this.getEl('dailyChallengeBackBtn'),
-                        moreModesBackBtn: this.getEl('moreModesBackBtn'),
-                        settingsBackBtn: this.getEl('settingsBackBtn'),
-                        howToPlayBackBtn: this.getEl('howToPlayBackBtn'),
-                        playBtn: this.getEl('playBtn'),
-                        categoryBackToHomeBtn: this.getEl('categoryBackToHomeBtn'),
-                        finishGameBtn: this.getEl('finishGameBtn'),
-                        playAgainBtn: this.getEl('playAgainBtn'),
-                        chooseNewCategoryBtn: this.getEl('chooseNewCategoryBtn'),
-                        gameOverBackToHomeBtn: this.getEl('gameOverBackToHomeBtn'),
-                        viewCreditsBtn: this.getEl('viewCreditsBtn'),
-                        creditsBackBtn: this.getEl('creditsBackBtn'),
-                        speakBtn: this.getEl('speakBtn'),
-                        skipBtn: this.getEl('skipBtn'),
-                        continueBtn: this.getEl('continueBtn'),
-                        confirmQuitBtn: this.getEl('confirmQuitBtn'),
-                        cancelQuitBtn: this.getEl('cancelQuitBtn'),
-                        shareScoreBtn: this.getEl('shareScoreBtn'),
-                    },
-                    displays: { 
-                        gameProgressDisplay: this.getEl('gameProgressDisplay'),
-                        gameScoreDisplay: this.getEl('gameScoreDisplay'),
-                        strikesDisplay: this.getEl('strikesDisplay'),
-                        clueText: this.getEl('clueText'),
-                        wordDisplay: document.querySelector('.word-display'),
-                        gameOverTitle: this.getEl('gameOverTitle'), 
-                        finalScore: this.getEl('finalScore'), 
-                        scoreBreakdown: this.getEl('scoreBreakdown'),
-                        creditsContent: this.getEl('creditsContent'),
-                    },
-                    containers: { 
-                        categoryGrid: document.querySelector('.category-grid'),
-                        keyboard: this.getEl('keyboard'),
-                        continueOverlay: this.getEl('continue-overlay'),
-                        confirmModal: this.getEl('confirmModal'),
-                        screenBox: document.querySelector('.screen-box'),
-                    },
-                    settingsToggles: { 
-                        darkMode: this.getEl('darkModeToggle'),
-                        neonTheme: this.getEl('neonThemeToggle'),
-                        sound: this.getEl('soundToggle'), 
-                        gameLength: this.getEl('gameLengthSelector'),
-                    }
-                };
-            }
+    showScreen(name){Object.values(this.dom.screens).forEach(s=>s.classList.remove('active'));if(this.dom.screens[name]){this.dom.screens[name].classList.add('active');this.state.currentScreen=name;}if(name==='category'){this.state.selectedCategory=null;this.renderCategoryScreen()}}
 
-            processCluesIntoCategories() {
-                const categories = ["Family", "Sci-Fi", "Superhero", "Fantasy", "Emotional Damage", "Streaming Hits"];
-                this.categoryData.clear();
-                
-                categories.forEach(categoryName => {
-                    const firstClue = this.allClues.find(c => c.category === categoryName);
-                    if (firstClue) {
-                        this.categoryData.set(categoryName, {
-                            name: categoryName,
-                            clues: this.allClues.filter(c => c.category === categoryName),
-                            emoji: firstClue.emoji,
-                        });
-                    }
-                });
-            }
+    renderCategoryScreen(){const grid=this.dom.containers.categoryGrid;grid.innerHTML='';this.dom.buttons.playBtn.disabled=true;this.categoryData.forEach(cat=>{const btn=document.createElement('button');btn.className='category-btn';btn.dataset.category=cat.name;btn.innerHTML=`<div class="poster-emoji">${cat.emoji}</div><div class="tape-label">${cat.name}</div>`;grid.appendChild(btn)})}
 
-            loadSettings() {
-                const savedSettings = localStorage.getItem('plotTwistedSettings');
-                if (savedSettings) {
-                    Object.assign(this.settings, JSON.parse(savedSettings));
-                }
-            }
+    selectCategory(category){this.state.selectedCategory=category;this.dom.containers.categoryGrid.querySelectorAll('.category-btn').forEach(btn=>btn.classList.toggle('selected',btn.dataset.category===category));this.dom.buttons.playBtn.disabled=false;this.playSound('click')}
 
-            saveSettings() {
-                localStorage.setItem('plotTwistedSettings', JSON.stringify(this.settings));
-            }
+    startGame(){if(!this.state.selectedCategory)return;this.state.currentGameMode='standard';this.resetGameState();let available=this.getAvailableClues(this.state.selectedCategory);if(available.length<this.settings.numRounds){alert(`You've completed the ${this.state.selectedCategory} category! Resetting clues.`);this.resetSeenClues(this.state.selectedCategory);available=this.getAvailableClues(this.state.selectedCategory)}this.state.gameQuestions=this.shuffleArray(available).slice(0,this.settings.numRounds);if(!this.state.gameQuestions.length){alert('Not enough questions!');return;}this.state.lastPlayedCategory=this.state.selectedCategory;this.state.currentQuestionIndex=0;this.showScreen('game');this.nextQuestion();this.playSound('start')}
 
-            applySettingsToUI() {
-                document.body.classList.toggle('dark-mode', this.settings.darkMode);
-                document.body.classList.toggle('neon-theme', this.settings.neonTheme);
-                this.dom.settingsToggles.darkMode.classList.toggle('active', this.settings.darkMode);
-                this.dom.settingsToggles.neonTheme.classList.toggle('active', this.settings.neonTheme);
-                this.dom.settingsToggles.sound.classList.toggle('active', this.settings.sound);
-                if (this.settings.sound) {
-                    ensureTone(this);
-                }
-                this.dom.settingsToggles.gameLength.querySelectorAll('.length-btn').forEach(btn => {
-                    btn.classList.toggle('selected', parseInt(btn.dataset.count) === this.settings.numRounds);
-                });
-            }
+    resetGameState(){this.state.totalScore=0;this.state.playedQuestions=[];this.state.strikesLeft=3}
 
-            bindEventListeners() {
-                const listeners = [
-                    { el: this.dom.buttons.startGameBtn, fn: () => this.showScreen('category') },
-                    { el: this.dom.buttons.settingsBtn, fn: () => this.showScreen('settings') },
-                    { el: this.dom.buttons.howToPlayBtn, fn: () => this.showScreen('howToPlay') },
-                    { el: this.dom.buttons.dailyChallengeBtn, fn: () => this.startDailyChallenge() },
-                    { el: this.dom.buttons.moreModesBtn, fn: () => this.showScreen('moreModes') },
-                    { el: this.dom.buttons.settingsBackBtn, fn: () => this.showScreen('start') },
-                    { el: this.dom.buttons.howToPlayBackBtn, fn: () => this.showScreen('start') },
-                    { el: this.dom.buttons.dailyChallengeBackBtn, fn: () => this.showScreen('start') },
-                    { el: this.dom.buttons.moreModesBackBtn, fn: () => this.showScreen('start') },
-                    { el: this.dom.buttons.categoryBackToHomeBtn, fn: () => this.showScreen('start') },
-                    { el: this.dom.buttons.gameOverBackToHomeBtn, fn: () => this.showScreen('start') },
-                    { el: this.dom.buttons.creditsBackBtn, fn: () => this.showScreen('gameOver') },
-                    { el: this.dom.buttons.playBtn, fn: () => this.startGame() },
-                    { el: this.dom.buttons.skipBtn, fn: () => this.skipQuestion() },
-                    { el: this.dom.buttons.continueBtn, fn: () => this.nextQuestion() },
-                    { el: this.dom.buttons.finishGameBtn, fn: () => this.dom.containers.confirmModal.classList.add('active') },
-                    { el: this.dom.buttons.speakBtn, fn: () => this.toggleSpeechRecognition() },
-                    { el: this.dom.buttons.playAgainBtn, fn: () => this.playAgain() },
-                    { el: this.dom.buttons.chooseNewCategoryBtn, fn: () => this.showScreen('category') },
-                    { el: this.dom.buttons.viewCreditsBtn, fn: () => this.showCredits() },
-                    { el: this.dom.buttons.shareScoreBtn, fn: () => this.shareDailyScore() },
-                    { el: this.dom.buttons.confirmQuitBtn, fn: () => { this.dom.containers.confirmModal.classList.remove('active'); this.endGame(true); } },
-                    { el: this.dom.buttons.cancelQuitBtn, fn: () => this.dom.containers.confirmModal.classList.remove('active') },
-                ];
+    nextQuestion(){if(this.state.currentQuestionIndex>=this.state.gameQuestions.length){this.endGame();return}const q=this.state.gameQuestions[this.state.currentQuestionIndex];this.state.currentAnswer=q.title.toUpperCase();this.state.guessedLetters=[];this.state.isRoundOver=false;this.dom.displays.clueText.innerHTML=`<span class="clue-feedback">${q.clue}</span>`;this.dom.containers.continueOverlay.classList.remove('visible');this.updateWordDisplay();this.renderKeyboard();this.updateGameStatusDisplay();this.state.currentQuestionIndex++}
 
-                listeners.forEach(({ el, fn }) => {
-                    if (el) {
-                        el.addEventListener('click', fn);
-                    }
-                });
+    updateWordDisplay(){const ans=this.state.currentAnswer;this.dom.displays.wordDisplay.textContent=ans.split('').map(c=>c===' '?" ":(!/^[A-Z0-9]$/.test(c)?c:(this.state.guessedLetters.includes(c)?c:'_'))).join('')}
 
-                if (this.dom.containers.categoryGrid) {
-                    this.dom.containers.categoryGrid.addEventListener('click', (e) => {
-                        const categoryButton = e.target.closest('.category-btn');
-                        if (categoryButton) {
-                            this.selectCategory(categoryButton.dataset.category);
-                        }
-                    });
-                }
-                
-                if (this.dom.settingsToggles.darkMode) {
-                    this.dom.settingsToggles.darkMode.addEventListener('click', () => {
-                        this.settings.darkMode = !this.settings.darkMode; 
-                        if (this.settings.darkMode) this.settings.neonTheme = false;
-                        this.saveSettings(); 
-                        this.applySettingsToUI();
-                    });
-                }
+    renderKeyboard(){const kb=this.dom.containers.keyboard;kb.innerHTML='';this.keyLayout.forEach(row=>{const rd=document.createElement('div');rd.className='keyboard-row';row.forEach(k=>{const b=document.createElement('button');b.className='key';b.textContent=k;b.dataset.key=k;if(this.state.guessedLetters.includes(k))b.classList.add('disabled');b.addEventListener('click',()=>this.handleKeyPress(k));rd.appendChild(b)});kb.appendChild(rd)})}
 
-                if (this.dom.settingsToggles.neonTheme) {
-                    this.dom.settingsToggles.neonTheme.addEventListener('click', () => {
-                        this.settings.neonTheme = !this.settings.neonTheme; 
-                        if (this.settings.neonTheme) this.settings.darkMode = false;
-                        this.saveSettings(); 
-                        this.applySettingsToUI();
-                    });
-                }
+    handleKeyPress(k){if(this.state.isRoundOver||this.state.guessedLetters.includes(k))return;this.state.guessedLetters.push(k);this.renderKeyboard();if(this.state.currentAnswer.includes(k)){this.playSound('correct');this.updateWordDisplay();this.checkForWin()}else{this.playSound('incorrect');this.state.strikesLeft--;this.updateGameStatusDisplay();this.dom.containers.screenBox.classList.add('animate-shake');setTimeout(()=>this.dom.containers.screenBox.classList.remove('animate-shake'),500);if(this.state.strikesLeft<=0)this.endGame(true)}}
 
-                if (this.dom.settingsToggles.sound) {
-                    this.dom.settingsToggles.sound.addEventListener('click', () => {
-                        this.settings.sound = !this.settings.sound; this.saveSettings(); this.applySettingsToUI();
-                    });
-                }
+    checkForWin(){const d=this.dom.displays.wordDisplay.textContent;if(!d.includes('_')){this.state.isRoundOver=true;this.state.totalScore+=100;const cq=this.state.gameQuestions[this.state.currentQuestionIndex-1];this.state.playedQuestions.push({...cq,status:'correct'});this.markClueAsSeen(this.state.selectedCategory,cq.title);this.dom.displays.clueText.innerHTML='<span class="clue-feedback correct">Correct!</span>';this.dom.containers.continueOverlay.classList.add('visible');this.playSound('winRound')}}
 
-                if (this.dom.settingsToggles.gameLength) {
-                    this.dom.settingsToggles.gameLength.addEventListener('click', (e) => {
-                        if (e.target.classList.contains('length-btn')) {
-                            this.settings.numRounds = parseInt(e.target.dataset.count); this.saveSettings(); this.applySettingsToUI();
-                        }
-                    });
-                }
-            }
-            
-            showScreen(screenName) {
-                Object.values(this.dom.screens).forEach(screen => screen.classList.remove('active'));
-                if (this.dom.screens[screenName]) {
-                    this.dom.screens[screenName].classList.add('active');
-                    this.state.currentScreen = screenName;
-                }
-                if (screenName === 'category') {
-                    this.state.selectedCategory = null;
-                    this.renderCategoryScreen();
-                }
-            }
+    skipQuestion(){if(this.state.isRoundOver)return;this.state.isRoundOver=true;const cq=this.state.gameQuestions[this.state.currentQuestionIndex-1];this.state.playedQuestions.push({...cq,status:'skipped'});this.markClueAsSeen(this.state.selectedCategory,cq.title);this.dom.displays.clueText.innerHTML=`<span class="clue-feedback incorrect">Skipped! The answer was: ${this.state.currentAnswer}</span>`;this.disableKeyboard();this.dom.buttons.skipBtn.disabled=true;this.dom.containers.continueOverlay.classList.add('visible');this.playSound('skip')}
 
-            renderCategoryScreen() {
-                const grid = this.dom.containers.categoryGrid;
-                grid.innerHTML = '';
-                this.dom.buttons.playBtn.disabled = true;
+    updateGameStatusDisplay(){this.dom.displays.gameProgressDisplay.textContent=`Question: ${this.state.currentQuestionIndex+1} / ${this.state.gameQuestions.length}`;this.dom.displays.gameScoreDisplay.textContent=`Score: ${this.state.totalScore}`;this.dom.buttons.skipBtn.disabled=this.state.isRoundOver;const sc=this.dom.displays.strikesDisplay;sc.innerHTML='';for(let i=0;i<3;i++){const icon=document.createElement('i');icon.className='ph ph-ticket';if(i>=this.state.strikesLeft)icon.classList.add('used');sc.appendChild(icon)}}
 
-                this.categoryData.forEach(cat => {
-                    const btn = document.createElement('button');
-                    btn.className = 'category-btn';
-                    btn.dataset.category = cat.name;
-                    btn.innerHTML = `
-                        <div class="poster-emoji">${cat.emoji}</div>
-                        <div class="tape-label">${cat.name}</div>
-                    `;
-                    grid.appendChild(btn);
-                });
-            }
-            
-            selectCategory(category) {
-                this.state.selectedCategory = category;
-                this.dom.containers.categoryGrid.querySelectorAll('.category-btn').forEach(btn => {
-                    btn.classList.toggle('selected', btn.dataset.category === category);
-                });
-                this.dom.buttons.playBtn.disabled = false;
-                this.playSound('click');
-            }
-            
-            startGame() {
-                if (!this.state.selectedCategory) return;
-                this.state.currentGameMode = 'standard';
-                this.resetGameState();
-                
-                const categoryInfo = this.categoryData.get(this.state.selectedCategory);
-                let availableClues = this.getAvailableClues(this.state.selectedCategory);
-                
-                if (availableClues.length < this.settings.numRounds) {
-                    alert(`You've completed the ${this.state.selectedCategory} category! Resetting clues for this category.`);
-                    this.resetSeenClues(this.state.selectedCategory);
-                    availableClues = this.getAvailableClues(this.state.selectedCategory);
-                }
+    endGame(q=false){this.dom.displays.gameOverTitle.textContent=q?"Game Over":"Your Final Cut";if(this.state.currentGameMode==='daily'){localStorage.setItem('pt_daily_played_'+new Date().toDateString(),'true');this.checkDailyChallengeStatus();const c=this.state.playedQuestions.filter(x=>x.status==='correct').length;this.dom.displays.finalScore.textContent=`${c} / 10`;this.dom.buttons.playAgainBtn.style.display='none';this.dom.buttons.chooseNewCategoryBtn.style.display='none';this.dom.buttons.shareScoreBtn.style.display='inline-block'}else{this.dom.displays.finalScore.textContent=this.state.totalScore;this.dom.buttons.playAgainBtn.style.display='inline-block';this.dom.buttons.chooseNewCategoryBtn.style.display='inline-block';this.dom.buttons.shareScoreBtn.style.display='none'}const bl=this.dom.displays.scoreBreakdown;bl.innerHTML='';this.state.playedQuestions.forEach(q=>{const li=document.createElement('li');const p=q.status==='correct'?'+100':'+0';li.innerHTML=`<span>${q.title}</span><span>${p}</span>`;bl.appendChild(li)});this.showScreen('gameOver');this.playSound('endGame')}
 
-                this.state.gameQuestions = this.shuffleArray(availableClues).slice(0, this.settings.numRounds);
-                
-                if (this.state.gameQuestions.length === 0) {
-                    alert("Not enough questions in this category!");
-                    return;
-                }
+    playAgain(){this.showScreen('category')}
 
-                this.state.lastPlayedCategory = this.state.selectedCategory;
-                this.state.currentQuestionIndex = 0;
-                this.showScreen('game');
-                this.nextQuestion();
-                this.playSound('start');
-            }
-            
-            resetGameState() {
-                this.state.totalScore = 0;
-                this.state.playedQuestions = [];
-                this.state.strikesLeft = 3;
-            }
+    showCredits(){const c=this.dom.displays.creditsContent;c.innerHTML='';this.state.playedQuestions.forEach(q=>{const i=document.createElement('div');i.className='credit-item';const sc=q.status==='correct'?'status-correct':'status-incorrect';i.innerHTML=`<div class="title">${q.title}</div><div class="clue">"${q.clue}"</div><div class="${sc}">${q.status.toUpperCase()}</div>`;c.appendChild(i)});this.showScreen('credits')}
 
-            nextQuestion() {
-                if (this.state.currentQuestionIndex >= this.state.gameQuestions.length) {
-                    this.endGame();
-                    return;
-                }
-                
-                const question = this.state.gameQuestions[this.state.currentQuestionIndex];
-                this.state.currentAnswer = question.title.toUpperCase();
-                this.state.guessedLetters = [];
-                this.state.isRoundOver = false;
+    shuffleArray(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()* (i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}return arr}
 
-                this.dom.displays.clueText.innerHTML = `<span class="clue-feedback">${question.clue}</span>`;
-                this.dom.containers.continueOverlay.classList.remove('visible');
-                
-                this.updateWordDisplay();
-                this.renderKeyboard();
-                this.updateGameStatusDisplay();
-                
-                this.state.currentQuestionIndex++;
-            }
+    setupSounds(){if(window.Tone&&Object.keys(this.synths).length===0){this.synths.click=new Tone.Synth({oscillator:{type:'sine'},envelope:{attack:0.01,decay:0.1,sustain:0,release:0.1}}).toDestination();this.synths.correct=new Tone.Synth({oscillator:{type:'triangle'},envelope:{attack:0.01,decay:0.2,sustain:0,release:0.2}}).toDestination();this.synths.incorrect=new Tone.Synth({oscillator:{type:'square'},envelope:{attack:0.01,decay:0.3,sustain:0,release:0.2}}).toDestination();this.synths.winRound=new Tone.PolySynth(Tone.Synth,{oscillator:{type:'fatsawtooth'},envelope:{attack:0.01,decay:0.4,sustain:0,release:0.2}}).toDestination();this.synths.skip=new Tone.Synth({oscillator:{type:'square'},envelope:{attack:0.2,decay:0.2,sustain:0,release:0.1}}).toDestination();this.synths.endGame=new Tone.Synth({oscillator:{type:'sine'},envelope:{attack:0.1,decay:0.5,sustain:0,release:0.2}}).toDestination();}}
 
-            updateWordDisplay() {
-                const answer = this.state.currentAnswer;
-                const display = answer.split('').map(char => {
-                    if (char === ' ') return ' ';
-                    if (!/^[A-Z0-9]$/.test(char)) return char;
-                    return this.state.guessedLetters.includes(char) ? char : '_';
-                }).join('');
-                this.dom.displays.wordDisplay.textContent = display;
-            }
-            
-            renderKeyboard() {
-                const keyboardContainer = this.dom.containers.keyboard;
-                keyboardContainer.innerHTML = '';
-                this.keyLayout.forEach(row => {
-                    const rowDiv = document.createElement('div');
-                    rowDiv.className = 'keyboard-row';
-                    row.forEach(key => {
-                        const keyBtn = document.createElement('button');
-                        keyBtn.className = 'key';
-                        keyBtn.textContent = key;
-                        keyBtn.dataset.key = key;
-                        if (this.state.guessedLetters.includes(key)) {
-                            keyBtn.classList.add('disabled');
-                        }
-                        keyBtn.addEventListener('click', () => this.handleKeyPress(key));
-                        rowDiv.appendChild(keyBtn);
-                    });
-                    keyboardContainer.appendChild(rowDiv);
-                });
-            }
-            
-            disableKeyboard() {
-                this.dom.containers.keyboard.querySelectorAll('.key').forEach(key => {
-                    key.classList.add('disabled');
-                });
-            }
+    playSound(s){if(!this.settings.sound||!window.Tone)return;this.setupSounds();if(!this.synths[s])return;Tone.start().then(()=>{switch(s){case'click':this.synths.click.triggerAttackRelease('C5','8n');break;case'correct':this.synths.correct.triggerAttackRelease('G5','8n');break;case'incorrect':this.synths.incorrect.triggerAttackRelease('C3','8n');break;case'winRound':this.synths.winRound.triggerAttackRelease(['C4','E4','G4','C5'],'8n');break;case'skip':this.synths.skip.triggerAttackRelease('F3','8n');break;case'endGame':this.synths.endGame.triggerAttackRelease('C2','2n');break}})}
 
-            handleKeyPress(key) {
-                if (this.state.isRoundOver || this.state.guessedLetters.includes(key)) return;
+    toggleSpeechRecognition(){alert('Speech recognition coming soon!')}
 
-                this.state.guessedLetters.push(key);
-                this.renderKeyboard();
+    checkDailyChallengeStatus(){try{const k='pt_daily_played_'+new Date().toDateString();const p=localStorage.getItem(k);const b=this.dom.buttons.dailyChallengeBtn;if(b){b.disabled=!!p;b.textContent=p?'Daily ✅':'Daily Challenge';b.setAttribute('aria-pressed',!!p)}}catch(e){console.error('Error checking daily challenge status:',e)}}
 
-                if (this.state.currentAnswer.includes(key)) {
-                    this.playSound('correct');
-                    this.updateWordDisplay();
-                    this.checkForWin();
-                } else {
-                    this.playSound('incorrect');
-                    this.state.strikesLeft--;
-                    this.updateGameStatusDisplay();
-                    this.dom.containers.screenBox.classList.add('animate-shake');
-                    setTimeout(() => this.dom.containers.screenBox.classList.remove('animate-shake'), 500);
-                    if (this.state.strikesLeft <= 0) {
-                        this.endGame(true); // End game if out of strikes
-                    }
-                }
-            }
+    startDailyChallenge(){try{const k='pt_daily_played_'+new Date().toDateString();if(localStorage.getItem(k)){alert("You've already completed today's challenge!");return;}this.state.currentGameMode='daily';this.resetGameState();this.state.gameQuestions=this.getDailyQuestions();this.state.currentQuestionIndex=0;this.showScreen('game');this.nextQuestion();this.playSound('start')}catch(e){console.error('Failed to start daily challenge:',e)}}
 
-            checkForWin() {
-                const currentDisplay = this.dom.displays.wordDisplay.textContent;
-                if (!currentDisplay.includes('_')) {
-                    this.state.isRoundOver = true;
-                    this.state.totalScore += 100;
-                    const currentQuestion = this.state.gameQuestions[this.state.currentQuestionIndex - 1];
-                    this.state.playedQuestions.push({ ...currentQuestion, status: 'correct' });
-                    this.markClueAsSeen(this.state.selectedCategory, currentQuestion.title);
-                    this.dom.displays.clueText.innerHTML = `<span class="clue-feedback correct">Correct!</span>`;
-                    this.dom.containers.continueOverlay.classList.add('visible');
-                    this.playSound('winRound');
-                }
-            }
-            
-            skipQuestion() {
-                if (this.state.isRoundOver) return;
+    getDailyQuestions(){const d=new Date();this._randomSeed=d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate();let sh=[...this.allClues];for(let i=sh.length-1;i>0;i--){const j=Math.floor(this.seededRandom()*(i+1));[sh[i],sh[j]]=[sh[j],sh[i]];}return sh.slice(0,10)}
 
-                this.state.isRoundOver = true;
-                const currentQuestion = this.state.gameQuestions[this.state.currentQuestionIndex - 1];
-                this.state.playedQuestions.push({ ...currentQuestion, status: 'skipped' });
-                this.markClueAsSeen(this.state.selectedCategory, currentQuestion.title);
-                this.dom.displays.clueText.innerHTML = `<span class="clue-feedback incorrect">Skipped! The answer was: ${this.state.currentAnswer}</span>`;
-                
-                this.disableKeyboard();
-                this.dom.buttons.skipBtn.disabled = true;
-                this.dom.containers.continueOverlay.classList.add('visible');
+    seededRandom(){this._randomSeed=(this._randomSeed*9301+49297)%233280;return this._randomSeed/233280}
 
-                this.playSound('skip');
-            }
+    shareDailyScore(){const c=this.state.playedQuestions.filter(q=>q.status==='correct').length;const eg=this.state.playedQuestions.map(q=>q.status==='correct'?'🟩':q.status==='skipped'?'🟨':'🟥').join('');const t=new Date();const ds=`${t.getMonth()+1}/${t.getDate()}/${t.getFullYear()}`;const st=`Plot Twisted - Daily Challenge ${ds}\n\nI got ${c}/10 correct!\n\n🎬 ${eg}\n\nCan you beat my score?`;if(navigator.clipboard){navigator.clipboard.writeText(st).then(()=>{this.showCopiedFeedback()}).catch(()=>{this.copyTextFallback(st)})}else this.copyTextFallback(st)}
 
-            updateGameStatusDisplay() {
-                this.dom.displays.gameProgressDisplay.textContent = `Question: ${this.state.currentQuestionIndex + 1} / ${this.state.gameQuestions.length}`;
-                this.dom.displays.gameScoreDisplay.textContent = `Score: ${this.state.totalScore}`;
-                this.dom.buttons.skipBtn.disabled = this.state.isRoundOver;
+    copyTextFallback(text){const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.top='0';ta.style.left='0';document.body.appendChild(ta);ta.focus();ta.select();try{const ok=document.execCommand('copy');if(ok)this.showCopiedFeedback();}catch(e){console.error('Fallback copy failed:',e);}document.body.removeChild(ta)}
 
-                // Update Strikes Display
-                const strikesContainer = this.dom.displays.strikesDisplay;
-                strikesContainer.innerHTML = '';
-                for (let i = 0; i < 3; i++) {
-                    const icon = document.createElement('i');
-                    icon.className = 'ph ph-ticket';
-                    if (i >= this.state.strikesLeft) {
-                        icon.classList.add('used');
-                    }
-                    strikesContainer.appendChild(icon);
-                }
-            }
+    showCopiedFeedback(){const btn=this.dom.buttons.shareScoreBtn;const orig=btn.textContent;btn.textContent='Copied!';btn.disabled=true;setTimeout(()=>{btn.textContent=orig;btn.disabled=false},2000)}
 
-            endGame(wasQuit = false) {
-                this.dom.displays.gameOverTitle.textContent = wasQuit ? "Game Over" : "Your Final Cut";
-                
-                if(this.state.currentGameMode === 'daily') {
-                    localStorage.setItem('pt_daily_played_' + new Date().toDateString(), 'true');
-                    this.checkDailyChallengeStatus();
-                    const correctCount = this.state.playedQuestions.filter(q => q.status === 'correct').length;
-                    this.dom.displays.finalScore.textContent = `${correctCount} / 10`;
-                    this.dom.buttons.playAgainBtn.style.display = 'none';
-                    this.dom.buttons.chooseNewCategoryBtn.style.display = 'none';
-                    this.dom.buttons.shareScoreBtn.style.display = 'inline-block';
-                } else {
-                    this.dom.displays.finalScore.textContent = this.state.totalScore;
-                    this.dom.buttons.playAgainBtn.style.display = 'inline-block';
-                    this.dom.buttons.chooseNewCategoryBtn.style.display = 'inline-block';
-                    this.dom.buttons.shareScoreBtn.style.display = 'none';
-                }
+    getSeenClues(category){try{const s=localStorage.getItem(`seenClues_${category}`);return s?JSON.parse(s):[]}catch(e){console.error('Could not get seen clues',e);return[]}}
 
-                const breakdownList = this.dom.displays.scoreBreakdown;
-                breakdownList.innerHTML = '';
-                this.state.playedQuestions.forEach(q => {
-                    const li = document.createElement('li');
-                    const points = q.status === 'correct' ? '+100' : '+0';
-                    li.innerHTML = `<span>${q.title}</span><span>${points}</span>`;
-                    breakdownList.appendChild(li);
-                });
+    markClueAsSeen(category,title){try{if(this.state.currentGameMode==='daily')return;const seen=this.getSeenClues(category);if(!seen.includes(title)){seen.push(title);localStorage.setItem(`seenClues_${category}`,JSON.stringify(seen))}}catch(e){console.error('Could not save seen clue to localStorage',e)}}
 
-                this.showScreen('gameOver');
-                this.playSound('endGame');
-            }
-            
-            playAgain() {
-                this.showScreen('category');
-            }
+    resetSeenClues(category){try{localStorage.removeItem(`seenClues_${category}`)}catch(e){console.error('Could not reset seen clues',e)}}
+}
 
-            showCredits() {
-                const creditsContainer = this.dom.displays.creditsContent;
-                creditsContainer.innerHTML = '';
-                this.state.playedQuestions.forEach(q => {
-                    const item = document.createElement('div');
-                    item.className = 'credit-item';
-                    const statusClass = q.status === 'correct' ? 'status-correct' : 'status-incorrect';
-                    item.innerHTML = `
-                        <div class="title">${q.title}</div>
-                        <div class="clue">"${q.clue}"</div>
-                        <div class="${statusClass}">${q.status.toUpperCase()}</div>
-                    `;
-                    creditsContainer.appendChild(item);
-                });
-                this.showScreen('credits');
-            }
-            
-            shuffleArray(array) {
-                for (let i = array.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [array[i], array[j]] = [array[j], array[i]];
-                }
-                return array;
-            }
-            
-            setupSounds() {
-                if (window.Tone && Object.keys(this.synths).length === 0) {
-                    this.synths.click = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination();
-                    this.synths.correct = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.2 } }).toDestination();
-                    this.synths.incorrect = new Tone.Synth({ oscillator: { type: 'square' }, envelope: { attack: 0.01, decay: 0.3, sustain: 0, release: 0.2 } }).toDestination();
-                    this.synths.winRound = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'fatsawtooth' }, envelope: { attack: 0.01, decay: 0.4, sustain: 0, release: 0.2 } }).toDestination();
-                    this.synths.skip = new Tone.Synth({ oscillator: { type: 'square' }, envelope: { attack: 0.2, decay: 0.2, sustain: 0, release: 0.1 } }).toDestination();
-                    this.synths.endGame = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.1, decay: 0.5, sustain: 0, release: 0.2 } }).toDestination();
-                }
-            }
-
-            playSound(sound) {
-                if (!this.settings.sound || !window.Tone) return;
-                
-                this.setupSounds();
-                if (!this.synths[sound]) return;
-                
-                Tone.start().then(() => {
-                    switch(sound) {
-                        case 'click': this.synths.click.triggerAttackRelease('C5', '8n'); break;
-                        case 'correct': this.synths.correct.triggerAttackRelease('G5', '8n'); break;
-                        case 'incorrect': this.synths.incorrect.triggerAttackRelease('C3', '8n'); break;
-                        case 'winRound': this.synths.winRound.triggerAttackRelease(['C4', 'E4', 'G4', 'C5'], '8n'); break;
-                        case 'skip': this.synths.skip.triggerAttackRelease('F3', '8n'); break;
-                        case 'endGame': this.synths.endGame.triggerAttackRelease('C2', '2n'); break;
-                    }
-                });
-            }
-
-            toggleSpeechRecognition() {
-                alert('Speech recognition coming soon!');
-            }
-            
-            // --- DAILY CHALLENGE ---
-            checkDailyChallengeStatus() {
-                try {
-                    const key = 'pt_daily_played_' + new Date().toDateString();
-                    const played = localStorage.getItem(key);
-                    const btn = this.dom.buttons.dailyChallengeBtn;
-                    if (btn) {
-                        btn.disabled = !!played;
-                        btn.textContent = played ? 'Daily ✅' : 'Daily Challenge';
-                        btn.setAttribute('aria-pressed', !!played);
-                    }
-                } catch (e) {
-                    console.error('Error checking daily challenge status:', e);
-                }
-            }
-
-            startDailyChallenge() {
-                try {
-                    const key = 'pt_daily_played_' + new Date().toDateString();
-                    if (localStorage.getItem(key)) {
-                        alert("You've already completed today's challenge!");
-                        return;
-                    }
-                    this.state.currentGameMode = 'daily';
-                    this.resetGameState();
-                    this.state.gameQuestions = this.getDailyQuestions();
-                    this.state.currentQuestionIndex = 0;
-                    this.showScreen('game');
-                    this.nextQuestion();
-                    this.playSound('start');
-                } catch (e) {
-                    console.error('Failed to start daily challenge:', e);
-                }
-            }
-
-            getDailyQuestions() {
-                const date = new Date();
-                this._randomSeed = date.getFullYear() * 10000 + (date.getMonth() + 1) * 100 + date.getDate();
-                
-                let shuffled = [...this.allClues];
-                // Use the seeded random number generator to shuffle
-                for (let i = shuffled.length - 1; i > 0; i--) {
-                    const j = Math.floor(this.seededRandom() * (i + 1));
-                    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-                }
-                return shuffled.slice(0, 10);
-            }
-
-            seededRandom() {
-                this._randomSeed = (this._randomSeed * 9301 + 49297) % 233280;
-                return this._randomSeed / 233280.0;
-            }
-
-            shareDailyScore() {
-                const correctCount = this.state.playedQuestions.filter(q => q.status === 'correct').length;
-                const emojiGrid = this.state.playedQuestions.map(q => {
-                    if (q.status === 'correct') return '🟩';
-                    if (q.status === 'skipped') return '🟨';
-                    return '🟥';
-                }).join('');
-                const today = new Date();
-                const dateString = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
-                const shareText = `Plot Twisted - Daily Challenge ${dateString}\n\nI got ${correctCount}/10 correct!\n\n🎬 ${emojiGrid}\n\nCan you beat my score?`;
-                
-                if (navigator.clipboard) {
-                    navigator.clipboard.writeText(shareText).then(() => {
-                        this.showCopiedFeedback();
-                    }).catch(err => {
-                        console.warn('Clipboard API failed, trying fallback:', err);
-                        this.copyTextFallback(shareText);
-                    });
-                } else {
-                    console.warn('Clipboard API not available, using fallback.');
-                    this.copyTextFallback(shareText);
-                }
-            }
-
-            copyTextFallback(text) {
-                const textArea = document.createElement("textarea");
-                textArea.value = text;
-                textArea.style.top = "0";
-                textArea.style.left = "0";
-                textArea.style.position = "fixed";
-                document.body.appendChild(textArea);
-                textArea.focus();
-                textArea.select();
-                try {
-                    const successful = document.execCommand('copy');
-                    if (successful) {
-                        this.showCopiedFeedback();
-                    } else {
-                        throw new Error('Fallback copy failed');
-                    }
-                } catch (err) {
-                    console.error('Fallback copy command was unsuccessful:', err);
-                }
-                document.body.removeChild(textArea);
-            }
-
-            showCopiedFeedback() {
-                const originalText = this.dom.buttons.shareScoreBtn.textContent;
-                this.dom.buttons.shareScoreBtn.textContent = 'Copied!';
-                this.dom.buttons.shareScoreBtn.disabled = true;
-                setTimeout(() => {
-                    this.dom.buttons.shareScoreBtn.textContent = originalText;
-                    this.dom.buttons.shareScoreBtn.disabled = false;
-                }, 2000);
-            }
-            
-            // --- SMART SHUFFLE LOGIC ---
-            getSeenClues(category) {
-                try {
-                    const seen = localStorage.getItem(`seenClues_${category}`);
-                    return seen ? JSON.parse(seen) : [];
-                } catch (e) {
-                    console.error("Could not get seen clues from localStorage", e);
-                    return [];
-                }
-            }
-
-            markClueAsSeen(category, title) {
-                try {
-                    if (this.state.currentGameMode === 'daily') return; // Don't track seen clues for daily challenge
-                    const seen = this.getSeenClues(category);
-                    if (!seen.includes(title)) {
-                        seen.push(title);
-                        localStorage.setItem(`seenClues_${category}`, JSON.stringify(seen));
-                    }
-                } catch (e) {
-                    console.error("Could not save seen clue to localStorage", e);
-                }
-            }
-
-            getAvailableClues(category) {
-                const allInCategory = this.categoryData.get(category).clues;
-                const seenInCategory = this.getSeenClues(category);
-                return allInCategory.filter(clue => !seenInCategory.includes(clue.title));
-            }
-
-            resetSeenClues(category) {
-                try {
-                    localStorage.removeItem(`seenClues_${category}`);
-                } catch (e) {
-                    console.error("Could not reset seen clues in localStorage", e);
-                }
-            }
-        }
-
+// Instantiate the game once the DOM is ready
+document.addEventListener('DOMContentLoaded',()=>{const game=new PlotTwistedGame();game.init()});
