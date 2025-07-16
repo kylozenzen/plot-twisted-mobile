@@ -218,6 +218,7 @@ const cluesJSON = [
         ];
 
 
+
 // --- GAME LOGIC ---
 document.addEventListener('DOMContentLoaded', () => {
     const game = new PlotTwistedGame();
@@ -256,11 +257,24 @@ class PlotTwistedGame {
         this.cacheDomElements();
         this.processCluesIntoCategories();
         this.loadSettings();
-        this.applySettingsToUI();
-        this.bindEventListeners();
-        this.renderCategoryScreen();
-        this.checkDailyChallengeStatus();
-        this.showScreen('start');
+        this.applySettingsToUI() {
+        // Toggle body classes
+        document.body.classList.toggle('dark-mode', this.settings.darkMode);
+        document.body.classList.toggle('neon-theme', this.settings.neonTheme);
+
+        // Safe toggles for settings buttons
+        const t = this.dom.settingsToggles;
+        if (t.darkMode) t.darkMode.classList.toggle('active', this.settings.darkMode);
+        if (t.neonTheme) t.neonTheme.classList.toggle('active', this.settings.neonTheme);
+        if (t.sound) t.sound.classList.toggle('active', this.settings.sound);
+        if (this.settings.sound && typeof ensureTone === 'function') ensureTone(this);
+
+        // Game length selector
+        if (t.gameLength) {
+            t.gameLength.querySelectorAll('.length-btn').forEach(btn => {
+                btn.classList.toggle('selected', parseInt(btn.dataset.count) === this.settings.numRounds);
+            });
+        }
     }
 
     getEl(id) { const el = document.getElementById(id); if (!el) console.warn(`Element with ID '${id}' not found.`); return el; }
@@ -445,3 +459,4 @@ class PlotTwistedGame {
 
 // Instantiate the game once the DOM is ready
 document.addEventListener('DOMContentLoaded',()=>{const game=new PlotTwistedGame();game.init()});
+
