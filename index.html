@@ -1,18 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Plot Twisted: Cinema Edition</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="app-container">
-    <!-- your entire game UI: startScreen, categoryScreen, gameScreen, etc. -->
-    <!-- …all the <div id="…"> blocks from before… -->
+    <!-- START SCREEN -->
+    <div id="startScreen" class="screen active">
+      <div class="screen-content">
+        <h1 class="logo">Plot Twisted</h1>
+        <div class="main-buttons">
+          <button class="btn" id="startGameBtn">Start Game</button>
+        </div>
+        <div class="sub-buttons">
+          <button class="btn" id="dailyChallengeBtn">Daily Challenge</button>
+          <button class="btn" id="moreModesBtn">More Modes</button>
+          <button class="btn" id="settingsBtn">Settings</button>
+          <button class="btn" id="howToPlayBtn">How to Play</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- (…insert all your other <div id="…"> screens here, exactly as in your original HTML…) -->
+
+    <!-- QUIT CONFIRM MODAL -->
+    <div id="confirmModal" class="confirm-modal">
+      <div class="confirm-box">
+        <h3>Are you sure you want to quit?</h3>
+        <div class="btn-row">
+          <button class="btn" id="confirmQuitBtn">YES, QUIT</button>
+          <button class="btn secondary" id="cancelQuitBtn">CANCEL</button>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- THIS is the magic line that actually wires up your buttons -->
+  <!-- **This** line wires up your JS so all the buttons actually work -->
   <script src="script.js"></script>
 </body>
 </html>
