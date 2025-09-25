@@ -4,17 +4,20 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>Plot Twisted: Cinema Edition</title>
+
+  <!-- Fonts & Icons -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@400;700;900&family=VT323&family=Bungee&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@400;700;900&family=VT323&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+  <!-- Styles -->
   <link rel="stylesheet" href="style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
 </head>
 <body>
   <div class="app-container">
-
-    <!-- START SCREEN -->
+    <!-- START -->
     <div id="startScreen" class="screen active">
       <div class="screen-content">
         <h1 class="logo">Plot Twisted</h1>
@@ -30,30 +33,109 @@
       </div>
     </div>
 
-    <!-- CATEGORY SCREEN -->
+    <!-- DAILY (placeholder) -->
+    <div id="dailyChallengeScreen" class="screen">
+      <div class="screen-content">
+        <div class="logo logo-small">Daily Challenge</div>
+        <p>Coming Soon!</p>
+        <button class="btn" id="dailyChallengeBackBtn">Back</button>
+      </div>
+    </div>
+
+    <!-- MORE MODES (placeholder) -->
+    <div id="moreModesScreen" class="screen">
+      <div class="screen-content">
+        <div class="logo logo-small">More Modes</div>
+        <p>Coming Soon!</p>
+        <button class="btn" id="moreModesBackBtn">Back</button>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="settingsScreen" class="screen">
+      <div class="screen-content">
+        <div class="logo logo-small">Settings</div>
+        <div class="settings-grid">
+          <div class="setting-item">
+            <div class="setting-title">Dark Mode</div>
+            <div class="toggle-switch" id="darkModeToggle"></div>
+          </div>
+          <div class="setting-item">
+            <div class="setting-title">Neon Theme</div>
+            <div class="toggle-switch" id="neonThemeToggle"></div>
+          </div>
+          <div class="setting-item">
+            <div class="setting-title">Sound FX</div>
+            <div class="toggle-switch" id="soundToggle"></div>
+          </div>
+          <div class="setting-item">
+            <div class="setting-title">Game Length</div>
+            <div class="game-length-selector" id="gameLengthSelector">
+              <button class="length-btn" data-count="5">5</button>
+              <button class="length-btn" data-count="10">10</button>
+              <button class="length-btn" data-count="15">15</button>
+            </div>
+          </div>
+        </div>
+        <button class="btn" id="settingsBackBtn">Back</button>
+      </div>
+    </div>
+
+    <!-- HOW TO PLAY -->
+    <div id="howToPlayScreen" class="screen">
+      <div class="screen-content">
+        <div class="logo logo-small">How To Play</div>
+        <div class="how-to-play-scroll-box">
+          <h3>The Goal</h3>
+          <p>Read the twisted plot summary and guess the correct movie title by selecting letters on the keyboard.</p>
+
+          <h3>Game Rules</h3>
+          <ul>
+            <li><b>Standard Game:</b> Choose a category and play a round of 5, 10, or 15 questions.</li>
+            <li><b>Strikes:</b> You have <b>3 strikes</b> for the entire game. Each incorrect letter guess uses one strike. If you run out of strikes, the game is over!</li>
+            <li><b>Scoring:</b> Each correct answer is worth 100 points.</li>
+          </ul>
+
+          <h3>Daily Challenge</h3>
+          <p>Test your skills with a unique set of 10 questions that are the same for everyone each day. You only get one attempt per day! After you finish, you'll get a special shareable summary of your results to compare with friends.</p>
+
+          <h3>Game Controls</h3>
+          <ul>
+            <li><b>Skip:</b> Don’t know the answer? Use the “Skip” button to forfeit the question and move to the next one.</li>
+            <li><b>Settings:</b> Use Settings to toggle Light, Dark, or Neon themes, adjust game length, and turn sound on/off.</li>
+          </ul>
+
+          <h3>About the Developer</h3>
+          <p>You can connect with the Developer <a href="https://x.com/Ben_Soup" target="_blank" style="color: var(--primary-color);">Ben Campbell</a> on X @Ben_Soup</p>
+        </div>
+        <button class="btn" id="howToPlayBackBtn">Back</button>
+      </div>
+    </div>
+
+    <!-- CATEGORY -->
     <div id="categoryScreen" class="screen">
       <div class="screen-content">
         <div class="logo logo-small">Select a Category</div>
         <div class="category-grid"></div>
         <div class="scroll-indicator">Scroll for more <i class="ph ph-caret-down"></i></div>
         <div class="bottom-bar">
-          <button class="btn" id="playBtn">PLAY</button>
+          <button class="btn" id="playBtn" disabled>PLAY</button>
           <button class="btn secondary" id="categoryBackToHomeBtn">BACK</button>
         </div>
       </div>
     </div>
 
-    <!-- GAME SCREEN -->
+    <!-- GAME -->
     <div id="gameScreen" class="screen">
       <div class="game-header">
         <div class="progress-display" id="gameProgressDisplay"></div>
         <div class="strikes-display" id="strikesDisplay"></div>
         <div class="score-display" id="gameScoreDisplay"></div>
-        <div id="categoryDisplay" class="category-pill">Category</div>
         <div class="finish-btn">
           <button class="btn btn-small" id="finishGameBtn">Quit</button>
         </div>
       </div>
+
       <div id="game-content-area">
         <div class="screen-box">
           <div id="clueText"></div>
@@ -64,6 +146,7 @@
         </div>
         <div class="word-display"></div>
       </div>
+
       <div id="keyboard-area">
         <div id="keyboard" class="keyboard"></div>
         <div id="continue-overlay">
@@ -106,6 +189,7 @@
       </div>
     </div>
 
+    <!-- QUIT CONFIRM -->
     <div id="confirmModal" class="confirm-modal">
       <div class="confirm-box">
         <h3>Are you sure you want to quit?</h3>
@@ -115,8 +199,13 @@
         </div>
       </div>
     </div>
-
   </div>
+
+  <!-- IMPORTANT: include your clues first -->
+  <!-- Paste your big clues array into clues.js as:  const cluesJSON = [ ... ]; -->
+  <script src="clues.js"></script>
+
+  <!-- Main game script -->
   <script src="script.js"></script>
 </body>
 </html>
