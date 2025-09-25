@@ -2,23 +2,53 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, user-scalable=no"
+  />
   <title>Plot Twisted: Cinema Edition</title>
 
-  <!-- Fonts & Icons -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@400;700;900&family=VT323&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <!-- Fonts & Icons (optional – can be offline) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@400;700;900&family=VT323&display=swap"
+    rel="stylesheet"
+  />
+  <script src="https://unpkg.com/@phosphor-icons/web" defer></script>
 
-  <!-- Styles -->
+  <!-- Main CSS -->
   <link rel="stylesheet" href="style.css" />
 
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
+  <!-- Tiny backup style so you see buttons even if style.css fails -->
+  <style>
+    .no-css body { font-family: Arial, sans-serif; padding: 16px; }
+    .no-css .btn { padding: 12px 16px; border: 1px solid #333; margin: 6px 0; display: inline-block; }
+    .no-css .screen { display: none; }
+    .no-css .screen.active { display: block; }
+  </style>
+
+  <link
+    rel="icon"
+    href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>"
+  />
+  <script>
+    // If CSS can't load (e.g., wrong path on mobile), add .no-css for the tiny backup style above
+    (function () {
+      var test = document.createElement("div");
+      test.style.display = "none";
+      document.documentElement.appendChild(test);
+      // after a tick, if computed styles look default and link failed, we keep going with backup
+      setTimeout(function () {
+        var links = [].slice.call(document.querySelectorAll('link[rel="stylesheet"]'));
+        var ok = links.length > 0;
+        if (!ok) document.documentElement.classList.add("no-css");
+      }, 0);
+    })();
+  </script>
 </head>
 <body>
   <div class="app-container">
-
     <!-- START -->
     <div id="startScreen" class="screen active">
       <div class="screen-content">
@@ -93,18 +123,18 @@
 
           <h3>Game Rules</h3>
           <ul>
-            <li><b>Standard Game:</b> Choose a category and play a round of 5, 10, or 15 questions.</li>
-            <li><b>Strikes:</b> You have <b>3 strikes</b> for the entire game. Each incorrect letter guess uses one strike. If you run out of strikes, the game is over!</li>
+            <li><b>Standard Game:</b> Choose a category and play 5, 10, or 15 questions.</li>
+            <li><b>Strikes:</b> You have <b>3 strikes</b> total. Wrong letter = 1 strike.</li>
             <li><b>Scoring:</b> Each correct answer is worth 100 points.</li>
           </ul>
 
           <h3>Daily Challenge</h3>
-          <p>Test your skills with a unique set of 10 questions. One attempt per day. Share your score when you’re done!</p>
+          <p>Unique set of 10 questions each day. One attempt. Share your score!</p>
 
           <h3>Game Controls</h3>
           <ul>
-            <li><b>Skip:</b> Use "Skip" to forfeit the question and move on.</li>
-            <li><b>Settings:</b> Toggle themes, sounds, and game length.</li>
+            <li><b>Skip:</b> Forfeit the question and move on.</li>
+            <li><b>Settings:</b> Themes, sounds, game length.</li>
           </ul>
         </div>
         <button class="btn" id="howToPlayBackBtn">Back</button>
@@ -116,7 +146,9 @@
       <div class="screen-content">
         <div class="logo logo-small">Select a Category</div>
         <div class="category-grid"></div>
-        <div class="scroll-indicator">Scroll for more <i class="ph ph-caret-down"></i></div>
+        <div class="scroll-indicator">
+          Scroll for more <i class="ph ph-caret-down"></i>
+        </div>
         <div class="bottom-bar">
           <button class="btn" id="playBtn">PLAY</button>
           <button class="btn secondary" id="categoryBackToHomeBtn">BACK</button>
@@ -152,7 +184,7 @@
       <div id="keyboard-area">
         <div id="keyboard" class="keyboard"></div>
 
-        <!-- CONTINUE overlay: appears ONLY after correct or skip -->
+        <!-- CONTINUE overlay -->
         <div id="continue-overlay">
           <button class="btn" id="continueBtn">Continue</button>
         </div>
@@ -180,19 +212,6 @@
       </div>
     </div>
 
-    <!-- CREDITS -->
-    <div id="creditsScreen" class="screen">
-      <div class="screen-content">
-        <div class="logo logo-small">CREDITS</div>
-        <div class="credits-roll">
-          <div class="credits-content" id="creditsContent"></div>
-        </div>
-        <div class="end-buttons">
-          <button class="btn secondary" id="creditsBackBtn">Go Back</button>
-        </div>
-      </div>
-    </div>
-
     <!-- QUIT CONFIRM -->
     <div id="confirmModal" class="confirm-modal">
       <div class="confirm-box">
@@ -203,11 +222,11 @@
         </div>
       </div>
     </div>
-
   </div>
 
-  <!-- IMPORTANT: load clues first, then game script -->
-  <script src="clues.js"></script>
-  <script src="script.js"></script>
+  <!-- IMPORTANT: clues before script, BOTH deferred -->
+  <script src="clues.js" defer></script>
+  <script src="script.js" defer></script>
 </body>
 </html>
+
