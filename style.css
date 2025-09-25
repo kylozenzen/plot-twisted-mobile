@@ -355,3 +355,29 @@ body.dark-mode .receipt-total { border-top-color: #555; }
   overflow-y: auto;     /* scroll inside if clue is very long */
 }
 
+
+/* === Breathing room for clue + answer area === */
+#game-content-area {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;   /* center content more vertically */
+  padding-top: 40px;         /* space from top */
+  padding-bottom: 80px;      /* keeps space above keyboard */
+}
+
+#clueText {
+  margin-bottom: 16px;       /* space below clue */
+  max-height: 30vh;          /* auto-resize for long text */
+  overflow-y: auto;
+}
+
+.word-display {
+  margin-top: 12px;          /* space above answer */
+  margin-bottom: 20px;       /* space below answer */
+}
+
+.action-btn-row {
+  margin-bottom: 20px;       /* space before keyboard */
+}
+
+
