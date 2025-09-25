@@ -1,8 +1,8 @@
 /* ================================
-   Plot Twisted — SINGLE PLAYER JS
-   Modes: Standard, Daily
-   Continue overlay only after win/skip
-   Credits screen intact
+    Plot Twisted — SINGLE PLAYER JS
+    Modes: Standard, Daily
+    Continue overlay only after win/skip
+    Credits screen intact
 ================================== */
 
 // --- BOOT ---
