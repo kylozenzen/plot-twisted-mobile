@@ -5,7 +5,7 @@
    Credits screen intact
 ================================== */
 
-// --- GAME START ---
+// --- BOOT ---
 document.addEventListener('DOMContentLoaded', () => {
   const game = new PlotTwistedGame();
   game.init();
@@ -27,7 +27,7 @@ class PlotTwistedGame {
       selectedCategory: null,
       lastPlayedCategory: '',
       gameQuestions: [],
-      currentQuestionIndex: 0, // points to NEXT question
+      currentQuestionIndex: 0, // points to NEXT question to fetch
       playedQuestions: [],
       totalScore: 0,
       currentAnswer: '',
@@ -72,7 +72,7 @@ class PlotTwistedGame {
     this.dom = {
       screens: {
         start: this.getEl('startScreen'),
-        moreModes: this.getEl('moreModesScreen'), // present in HTML, but unused
+        moreModes: this.getEl('moreModesScreen'),
         settings: this.getEl('settingsScreen'),
         category: this.getEl('categoryScreen'),
         game: this.getEl('gameScreen'),
@@ -141,6 +141,7 @@ class PlotTwistedGame {
   }
 
   processCluesIntoCategories() {
+    // Keep this list in sync with your data
     const categories = ["Family", "Sci-Fi", "Superhero", "Fantasy", "Emotional Damage", "Streaming Hits"];
     this.categoryData.clear();
     categories.forEach(name => {
@@ -149,7 +150,7 @@ class PlotTwistedGame {
         this.categoryData.set(name, {
           name,
           clues: this.allClues.filter(c => c.category === name),
-          emoji: first.emoji,
+          emoji: first.emoji || '🎬',
         });
       }
     });
@@ -303,43 +304,28 @@ class PlotTwistedGame {
   }
 
   // ---------- GAME FLOW ----------
-startGame() {
-  if (!this.state.selectedCategory) return;
+  startGame() {
+    if (!this.state.selectedCategory) return;
 
-  this.state.currentGameMode = 'standard';
-  this.resetGameState();
+    this.state.currentGameMode = 'standard';
+    this.resetGameState();
 
-  let availableClues = this.getAvailableClues(this.state.selectedCategory);
+    let availableClues = this.getAvailableClues(this.state.selectedCategory);
 
-  // No popups; silently reset if exhausted
-  if (availableClues.length < this.settings.numRounds) {
-    this.resetSeenClues(this.state.selectedCategory);
-    availableClues = this.getAvailableClues(this.state.selectedCategory);
-  }
+    // No popups; silently reset if exhausted
+    if (availableClues.length < this.settings.numRounds) {
+      this.resetSeenClues(this.state.selectedCategory);
+      availableClues = this.getAvailableClues(this.state.selectedCategory);
+    }
 
-  this.state.gameQuestions = this.shuffleArray(availableClues).slice(0, this.settings.numRounds);
+    // Build question set
+    this.state.gameQuestions = this.shuffleArray(availableClues).slice(0, this.settings.numRounds);
 
-  // Fallback to all clues if needed
-  if (this.state.gameQuestions.length === 0) {
-    const all = this.categoryData.get(this.state.selectedCategory)?.clues || [];
-    this.state.gameQuestions = this.shuffleArray(all).slice(0, this.settings.numRounds);
-    if (this.state.gameQuestions.length === 0) return;
-  }
-
-  this.state.lastPlayedCategory = this.state.selectedCategory;
-  this.state.currentQuestionIndex = 0;
-
-  this.showScreen('game');
-  this.nextQuestion();
-  this.playSound('start');
-}
-
-
-
-   this.state.gameQuestions = this.shuffleArray(availableClues).slice(0, this.settings.numRounds);
+    // Fallback to all clues if somehow still empty
     if (this.state.gameQuestions.length === 0) {
-      alert('Not enough questions in this category!');
-      return;
+      const all = this.categoryData.get(this.state.selectedCategory)?.clues || [];
+      this.state.gameQuestions = this.shuffleArray(all).slice(0, this.settings.numRounds);
+      if (this.state.gameQuestions.length === 0) return;
     }
 
     this.state.lastPlayedCategory = this.state.selectedCategory;
@@ -699,7 +685,7 @@ startGame() {
   }
   markClueAsSeen(category, title) {
     try {
-      if (this.state.currentGameMode === 'daily') return;
+      if (this.state.currentGameMode === 'daily') return; // don't track for daily
       const seen = this.getSeenClues(category);
       if (!seen.includes(title)) {
         seen.push(title);
@@ -708,7 +694,7 @@ startGame() {
     } catch {}
   }
   getAvailableClues(category) {
-    const allInCategory = this.categoryData.get(category).clues;
+    const allInCategory = this.categoryData.get(category)?.clues || [];
     const seen = this.getSeenClues(category);
     return allInCategory.filter(c => !seen.includes(c.title));
   }
