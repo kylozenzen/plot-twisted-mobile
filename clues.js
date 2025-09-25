@@ -1,6 +1,4 @@
 window.cluesJSON = [
-
-
   { "title": "Finding Nemo", "clue": "Helicopter parent commits multiple felonies trying to retrieve his runaway son with a lucky blue amnesiac.", "category": "Family", "emoji": "🐠" },
   { "title": "Encanto", "clue": "Gifted family singles out their only un-magical member for vibes management.", "category": "Family", "emoji": "🐠" },
   { "title": "Finding Nemo", "clue": "Helicopter parent ignores maritime law to retrieve a truant guppy.", "category": "Family", "emoji": "🐠" },
@@ -50,10 +48,8 @@ window.cluesJSON = [
   { "title": "Snow White and the Seven Dwarfs", "clue": "Miner roommates adopt apple-averse princess.", "category": "Family", "emoji": "🐠" },
   { "title": "The Jungle Book", "clue": "Wolf homeschooler taught survival by jazz bear.", "category": "Family", "emoji": "🐠" },
   { "title": "Pinocchio", "clue": "Wooden boy fails honesty patch notes repeatedly.", "category": "Family", "emoji": "🐠" },
-  { "title": "101 Dalmatians", "clue": "Fashion mogul underestimates supply chain of puppies.", "category": "Family", "emoji": "🐠" 
+  { "title": "101 Dalmatians", "clue": "Fashion mogul underestimates supply chain of puppies.", "category": "Family", "emoji": "🐠" },
+
   { "title": "Star Wars", "clue": "Farm boy discovers his father is a space fascist with breathing problems.", "category": "Sci-Fi", "emoji": "🤖" },
   { "title": "Titanic", "clue": "Rich girl and poor artist fall in love on sinking ship with insufficient lifeboats.", "category": "Emotional Damage", "emoji": "💔" }
 ];
-
-
-window.cluesJSON = cluesJSON;
