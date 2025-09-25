@@ -8,3 +8,6 @@ const cluesJSON = [
   { "title": "Star Wars", "clue": "Farm boy discovers his father is a space fascist with breathing problems.", "category": "Sci-Fi", "emoji": "🤖" },
   { "title": "Titanic", "clue": "Rich girl and poor artist fall in love on sinking ship with insufficient lifeboats.", "category": "Emotional Damage", "emoji": "💔" }
 ];
+
+
+window.cluesJSON = cluesJSON;
