@@ -921,3 +921,33 @@ class PlotTwistedGame {
   }
 })();
 
+/* === Handle Game Over with Answer Reveal === */
+function handleGameOver(correctAnswer) {
+  const clueText = document.getElementById('clueText');
+
+  // Show the answer briefly
+  if (clueText) {
+    clueText.textContent = `Answer: ${correctAnswer}`;
+    clueText.style.color = "var(--primary-color, #ff4444)";
+  }
+
+  // After 2 seconds, go to Game Over screen
+  setTimeout(() => {
+    showGameOver(correctAnswer);
+  }, 2000);
+}
+
+function showGameOver(correctAnswer) {
+  const gameOverScreen = document.getElementById('gameOverScreen');
+  const scoreBreakdown = document.getElementById('scoreBreakdown');
+
+  // Add missed answer to the end credits list
+  if (scoreBreakdown && correctAnswer) {
+    const li = document.createElement('li');
+    li.textContent = `Missed Answer: ${correctAnswer}`;
+    scoreBreakdown.appendChild(li);
+  }
+
+  gameOverScreen.classList.add('active');
+}
+
