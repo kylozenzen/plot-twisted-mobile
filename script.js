@@ -304,40 +304,34 @@ class PlotTwistedGame {
 
   // ---------- GAME FLOW ----------
 startGame() {
-    if (!this.state.selectedCategory) return;
+  if (!this.state.selectedCategory) return;
 
-    this.state.currentGameMode = 'standard';
-    this.resetGameState();
+  this.state.currentGameMode = 'standard';
+  this.resetGameState();
 
-    // Pull unseen clues for the chosen category
-    let availableClues = this.getAvailableClues(this.state.selectedCategory);
+  let availableClues = this.getAvailableClues(this.state.selectedCategory);
 
-    // If you’ve exhausted this category, silently reset the “seen” list (no alerts)
-    if (availableClues.length < this.settings.numRounds) {
-        this.resetSeenClues(this.state.selectedCategory);
-        availableClues = this.getAvailableClues(this.state.selectedCategory);
-    }
+  // No popups; silently reset if exhausted
+  if (availableClues.length < this.settings.numRounds) {
+    this.resetSeenClues(this.state.selectedCategory);
+    availableClues = this.getAvailableClues(this.state.selectedCategory);
+  }
 
-    // Build this round’s questions
-    this.state.gameQuestions = this.shuffleArray(availableClues).slice(0, this.settings.numRounds);
+  this.state.gameQuestions = this.shuffleArray(availableClues).slice(0, this.settings.numRounds);
 
-    // Defensive fallback: if something went wrong, fall back to all clues in the category
-    if (this.state.gameQuestions.length === 0) {
-        const allInCategory = this.categoryData.get(this.state.selectedCategory)?.clues || [];
-        this.state.gameQuestions = this.shuffleArray(allInCategory).slice(0, this.settings.numRounds);
-        if (this.state.gameQuestions.length === 0) return; // still nothing — bail safely
-    }
+  // Fallback to all clues if needed
+  if (this.state.gameQuestions.length === 0) {
+    const all = this.categoryData.get(this.state.selectedCategory)?.clues || [];
+    this.state.gameQuestions = this.shuffleArray(all).slice(0, this.settings.numRounds);
+    if (this.state.gameQuestions.length === 0) return;
+  }
 
-    this.state.lastPlayedCategory = this.state.selectedCategory;
-    this.state.currentQuestionIndex = 0;
+  this.state.lastPlayedCategory = this.state.selectedCategory;
+  this.state.currentQuestionIndex = 0;
 
-    if (this.dom.displays.categoryDisplay) {
-        this.dom.displays.categoryDisplay.textContent = this.state.selectedCategory;
-    }
-
-    this.showScreen('game');
-    this.nextQuestion();
-    this.playSound('start');
+  this.showScreen('game');
+  this.nextQuestion();
+  this.playSound('start');
 }
 
 
