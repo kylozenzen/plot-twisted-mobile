@@ -303,7 +303,7 @@ class PlotTwistedGame {
   }
 
   // ---------- GAME FLOW ----------
-  startGame() {
+startGame() {
     if (!this.state.selectedCategory) return;
 
     this.state.currentGameMode = 'standard';
@@ -311,11 +311,27 @@ class PlotTwistedGame {
 
     let availableClues = this.getAvailableClues(this.state.selectedCategory);
 
+    // If not enough unseen clues, reset silently
     if (availableClues.length < this.settings.numRounds) {
-      alert(`You've completed the ${this.state.selectedCategory} category! Resetting clues for this category.`);
-      this.resetSeenClues(this.state.selectedCategory);
-      availableClues = this.getAvailableClues(this.state.selectedCategory);
+        this.resetSeenClues(this.state.selectedCategory);
+        availableClues = this.getAvailableClues(this.state.selectedCategory);
     }
+
+    this.state.gameQuestions = this.shuffleArray(availableClues).slice(0, this.settings.numRounds);
+    if (this.state.gameQuestions.length === 0) return;
+
+    this.state.lastPlayedCategory = this.state.selectedCategory;
+    this.state.currentQuestionIndex = 0;
+
+    if (this.dom.displays.categoryDisplay) {
+        this.dom.displays.categoryDisplay.textContent = this.state.selectedCategory;
+    }
+
+    this.showScreen('game');
+    this.nextQuestion();
+    this.playSound('start');
+}
+
 
     this.state.gameQuestions = this.shuffleArray(availableClues).slice(0, this.settings.numRounds);
     if (this.state.gameQuestions.length === 0) {
