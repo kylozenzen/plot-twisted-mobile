@@ -894,3 +894,30 @@ class PlotTwistedGame {
         }
     }
 }
+
+/* === SPACING SYNC WITH KEYBOARD === */
+(function () {
+  const root = document.documentElement;
+  const keyboardArea = document.getElementById('keyboard-area');
+
+  function updateKeyboardVars() {
+    if (keyboardArea) {
+      root.style.setProperty('--kbui', keyboardArea.offsetHeight + 'px');
+    }
+    if (window.visualViewport) {
+      const osk = Math.max(0, window.innerHeight - window.visualViewport.height);
+      root.style.setProperty('--osk', osk + 'px');
+    }
+  }
+
+  updateKeyboardVars();
+
+  if (window.ResizeObserver && keyboardArea) {
+    new ResizeObserver(updateKeyboardVars).observe(keyboardArea);
+  }
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', updateKeyboardVars);
+    window.visualViewport.addEventListener('scroll', updateKeyboardVars);
+  }
+})();
+
