@@ -217,11 +217,18 @@ const cluesJSON = [
     { "title": "Only Murders in the Building", "clue": "Three true-crime podcast enthusiasts who live in the same apartment building team up to solve a murder.", "category": "Streaming Hits", "emoji": "📺" }
 ];
 
+
 // --- GAME LOGIC ---
 document.addEventListener('DOMContentLoaded', () => {
     const game = new PlotTwistedGame();
     game.init();
 });
+
+// Safe no-op for Tone bootstrap if upstream helper is missing
+function ensureTone(ctx) {
+    if (!window.Tone) return;
+    // nothing to do; Tone is lazy-started via game.playSound
+}
 
 class PlotTwistedGame {
     constructor() {
@@ -230,25 +237,25 @@ class PlotTwistedGame {
         this.dom = {};
         this.state = {
             currentScreen: 'start',
-            currentGameMode: 'standard',
+            currentGameMode: 'standard', // 'standard' | 'daily'
             selectedCategory: null,
             lastPlayedCategory: '',
-            gameQuestions: [], 
-            currentQuestionIndex: 0, 
-            playedQuestions: [], 
-            totalScore: 0, 
+            gameQuestions: [],
+            currentQuestionIndex: 0, // points to NEXT question to fetch in nextQuestion()
+            playedQuestions: [],
+            totalScore: 0,
             currentAnswer: '',
-            guessedLetters: [], 
+            guessedLetters: [],
             isRoundOver: false,
             strikesLeft: 3,
         };
-        this.settings = { 
+        this.settings = {
             darkMode: false,
             neonTheme: false,
-            sound: false, 
-            numRounds: 5 
+            sound: false,
+            numRounds: 5
         };
-        this.keyLayout = [ 'QWERTYUIOP'.split(''), 'ASDFGHJKL'.split(''), 'ZXCVBNM'.split('') ];
+        this.keyLayout = ['QWERTYUIOP'.split(''), 'ASDFGHJKL'.split(''), 'ZXCVBNM'.split('')];
         this.synths = {};
         this.recognition = null;
         this.isListening = false;
@@ -275,12 +282,12 @@ class PlotTwistedGame {
 
     cacheDomElements() {
         this.dom = {
-            screens: { 
-                start: this.getEl('startScreen'), 
+            screens: {
+                start: this.getEl('startScreen'),
                 moreModes: this.getEl('moreModesScreen'),
                 settings: this.getEl('settingsScreen'),
-                category: this.getEl('categoryScreen'), 
-                game: this.getEl('gameScreen'), 
+                category: this.getEl('categoryScreen'),
+                game: this.getEl('gameScreen'),
                 gameOver: this.getEl('gameOverScreen'),
                 credits: this.getEl('creditsScreen'),
                 dailyChallenge: this.getEl('dailyChallengeScreen'),
@@ -311,28 +318,29 @@ class PlotTwistedGame {
                 cancelQuitBtn: this.getEl('cancelQuitBtn'),
                 shareScoreBtn: this.getEl('shareScoreBtn'),
             },
-            displays: { 
+            displays: {
                 gameProgressDisplay: this.getEl('gameProgressDisplay'),
                 gameScoreDisplay: this.getEl('gameScoreDisplay'),
                 strikesDisplay: this.getEl('strikesDisplay'),
                 clueText: this.getEl('clueText'),
                 wordDisplay: document.querySelector('.word-display'),
-                gameOverTitle: this.getEl('gameOverTitle'), 
-                finalScore: this.getEl('finalScore'), 
+                gameOverTitle: this.getEl('gameOverTitle'),
+                finalScore: this.getEl('finalScore'),
                 scoreBreakdown: this.getEl('scoreBreakdown'),
                 creditsContent: this.getEl('creditsContent'),
+                categoryDisplay: this.getEl('categoryDisplay'), // header pill (added in HTML)
             },
-            containers: { 
+            containers: {
                 categoryGrid: document.querySelector('.category-grid'),
                 keyboard: this.getEl('keyboard'),
                 continueOverlay: this.getEl('continue-overlay'),
                 confirmModal: this.getEl('confirmModal'),
                 screenBox: document.querySelector('.screen-box'),
             },
-            settingsToggles: { 
+            settingsToggles: {
                 darkMode: this.getEl('darkModeToggle'),
                 neonTheme: this.getEl('neonThemeToggle'),
-                sound: this.getEl('soundToggle'), 
+                sound: this.getEl('soundToggle'),
                 gameLength: this.getEl('gameLengthSelector'),
             }
         };
@@ -341,7 +349,7 @@ class PlotTwistedGame {
     processCluesIntoCategories() {
         const categories = ["Family", "Sci-Fi", "Superhero", "Fantasy", "Emotional Damage", "Streaming Hits"];
         this.categoryData.clear();
-        
+
         categories.forEach(categoryName => {
             const firstClue = this.allClues.find(c => c.category === categoryName);
             if (firstClue) {
@@ -368,15 +376,16 @@ class PlotTwistedGame {
     applySettingsToUI() {
         document.body.classList.toggle('dark-mode', this.settings.darkMode);
         document.body.classList.toggle('neon-theme', this.settings.neonTheme);
-        this.dom.settingsToggles.darkMode.classList.toggle('active', this.settings.darkMode);
-        this.dom.settingsToggles.neonTheme.classList.toggle('active', this.settings.neonTheme);
-        this.dom.settingsToggles.sound.classList.toggle('active', this.settings.sound);
-        if (this.settings.sound) {
-            ensureTone(this);
+        if (this.dom.settingsToggles.darkMode) this.dom.settingsToggles.darkMode.classList.toggle('active', this.settings.darkMode);
+        if (this.dom.settingsToggles.neonTheme) this.dom.settingsToggles.neonTheme.classList.toggle('active', this.settings.neonTheme);
+        if (this.dom.settingsToggles.sound) this.dom.settingsToggles.sound.classList.toggle('active', this.settings.sound);
+        if (this.settings.sound) ensureTone(this);
+
+        if (this.dom.settingsToggles.gameLength) {
+            this.dom.settingsToggles.gameLength.querySelectorAll('.length-btn').forEach(btn => {
+                btn.classList.toggle('selected', parseInt(btn.dataset.count) === this.settings.numRounds);
+            });
         }
-        this.dom.settingsToggles.gameLength.querySelectorAll('.length-btn').forEach(btn => {
-            btn.classList.toggle('selected', parseInt(btn.dataset.count) === this.settings.numRounds);
-        });
     }
 
     bindEventListeners() {
@@ -407,9 +416,7 @@ class PlotTwistedGame {
         ];
 
         listeners.forEach(({ el, fn }) => {
-            if (el) {
-                el.addEventListener('click', fn);
-            }
+            if (el) el.addEventListener('click', fn);
         });
 
         if (this.dom.containers.categoryGrid) {
@@ -420,40 +427,44 @@ class PlotTwistedGame {
                 }
             });
         }
-        
+
         if (this.dom.settingsToggles.darkMode) {
             this.dom.settingsToggles.darkMode.addEventListener('click', () => {
-                this.settings.darkMode = !this.settings.darkMode; 
+                this.settings.darkMode = !this.settings.darkMode;
                 if (this.settings.darkMode) this.settings.neonTheme = false;
-                this.saveSettings(); 
+                this.saveSettings();
                 this.applySettingsToUI();
             });
         }
 
         if (this.dom.settingsToggles.neonTheme) {
             this.dom.settingsToggles.neonTheme.addEventListener('click', () => {
-                this.settings.neonTheme = !this.settings.neonTheme; 
+                this.settings.neonTheme = !this.settings.neonTheme;
                 if (this.settings.neonTheme) this.settings.darkMode = false;
-                this.saveSettings(); 
+                this.saveSettings();
                 this.applySettingsToUI();
             });
         }
 
         if (this.dom.settingsToggles.sound) {
             this.dom.settingsToggles.sound.addEventListener('click', () => {
-                this.settings.sound = !this.settings.sound; this.saveSettings(); this.applySettingsToUI();
+                this.settings.sound = !this.settings.sound;
+                this.saveSettings();
+                this.applySettingsToUI();
             });
         }
 
         if (this.dom.settingsToggles.gameLength) {
             this.dom.settingsToggles.gameLength.addEventListener('click', (e) => {
                 if (e.target.classList.contains('length-btn')) {
-                    this.settings.numRounds = parseInt(e.target.dataset.count); this.saveSettings(); this.applySettingsToUI();
+                    this.settings.numRounds = parseInt(e.target.dataset.count);
+                    this.saveSettings();
+                    this.applySettingsToUI();
                 }
             });
         }
     }
-    
+
     showScreen(screenName) {
         Object.values(this.dom.screens).forEach(screen => screen.classList.remove('active'));
         if (this.dom.screens[screenName]) {
@@ -482,7 +493,7 @@ class PlotTwistedGame {
             grid.appendChild(btn);
         });
     }
-    
+
     selectCategory(category) {
         this.state.selectedCategory = category;
         this.dom.containers.categoryGrid.querySelectorAll('.category-btn').forEach(btn => {
@@ -491,15 +502,16 @@ class PlotTwistedGame {
         this.dom.buttons.playBtn.disabled = false;
         this.playSound('click');
     }
-    
+
     startGame() {
         if (!this.state.selectedCategory) return;
+
         this.state.currentGameMode = 'standard';
         this.resetGameState();
-        
+
         const categoryInfo = this.categoryData.get(this.state.selectedCategory);
         let availableClues = this.getAvailableClues(this.state.selectedCategory);
-        
+
         if (availableClues.length < this.settings.numRounds) {
             alert(`You've completed the ${this.state.selectedCategory} category! Resetting clues for this category.`);
             this.resetSeenClues(this.state.selectedCategory);
@@ -507,7 +519,7 @@ class PlotTwistedGame {
         }
 
         this.state.gameQuestions = this.shuffleArray(availableClues).slice(0, this.settings.numRounds);
-        
+
         if (this.state.gameQuestions.length === 0) {
             alert("Not enough questions in this category!");
             return;
@@ -515,11 +527,17 @@ class PlotTwistedGame {
 
         this.state.lastPlayedCategory = this.state.selectedCategory;
         this.state.currentQuestionIndex = 0;
+
+        // Header category pill
+        if (this.dom.displays.categoryDisplay) {
+            this.dom.displays.categoryDisplay.textContent = this.state.selectedCategory;
+        }
+
         this.showScreen('game');
         this.nextQuestion();
         this.playSound('start');
     }
-    
+
     resetGameState() {
         this.state.totalScore = 0;
         this.state.playedQuestions = [];
@@ -531,7 +549,7 @@ class PlotTwistedGame {
             this.endGame();
             return;
         }
-        
+
         const question = this.state.gameQuestions[this.state.currentQuestionIndex];
         this.state.currentAnswer = question.title.toUpperCase();
         this.state.guessedLetters = [];
@@ -539,12 +557,15 @@ class PlotTwistedGame {
 
         this.dom.displays.clueText.innerHTML = `<span class="clue-feedback">${question.clue}</span>`;
         this.dom.containers.continueOverlay.classList.remove('visible');
-        
+
         this.updateWordDisplay();
         this.renderKeyboard();
-        this.updateGameStatusDisplay();
-        
+        this.updateGameStatusDisplay(true); // force refresh
+
+        // advance pointer to reflect "current = 1-based"
         this.state.currentQuestionIndex++;
+        // refresh header to show correct "Question: N / total"
+        this.updateGameStatusDisplay(true);
     }
 
     updateWordDisplay() {
@@ -556,7 +577,7 @@ class PlotTwistedGame {
         }).join('');
         this.dom.displays.wordDisplay.textContent = display;
     }
-    
+
     renderKeyboard() {
         const keyboardContainer = this.dom.containers.keyboard;
         keyboardContainer.innerHTML = '';
@@ -577,7 +598,7 @@ class PlotTwistedGame {
             keyboardContainer.appendChild(rowDiv);
         });
     }
-    
+
     disableKeyboard() {
         this.dom.containers.keyboard.querySelectorAll('.key').forEach(key => {
             key.classList.add('disabled');
@@ -595,13 +616,17 @@ class PlotTwistedGame {
             this.updateWordDisplay();
             this.checkForWin();
         } else {
+            // wrong letter = strike
             this.playSound('incorrect');
             this.state.strikesLeft--;
             this.updateGameStatusDisplay();
+
             this.dom.containers.screenBox.classList.add('animate-shake');
             setTimeout(() => this.dom.containers.screenBox.classList.remove('animate-shake'), 500);
+
             if (this.state.strikesLeft <= 0) {
-                this.endGame(true); // End game if out of strikes
+                // reveal the answer briefly, then end the game
+                this.revealAnswerAndEnd();
             }
         }
     }
@@ -611,15 +636,17 @@ class PlotTwistedGame {
         if (!currentDisplay.includes('_')) {
             this.state.isRoundOver = true;
             this.state.totalScore += 100;
+
             const currentQuestion = this.state.gameQuestions[this.state.currentQuestionIndex - 1];
             this.state.playedQuestions.push({ ...currentQuestion, status: 'correct' });
             this.markClueAsSeen(this.state.selectedCategory, currentQuestion.title);
+
             this.dom.displays.clueText.innerHTML = `<span class="clue-feedback correct">Correct!</span>`;
             this.dom.containers.continueOverlay.classList.add('visible');
             this.playSound('winRound');
         }
     }
-    
+
     skipQuestion() {
         if (this.state.isRoundOver) return;
 
@@ -627,8 +654,9 @@ class PlotTwistedGame {
         const currentQuestion = this.state.gameQuestions[this.state.currentQuestionIndex - 1];
         this.state.playedQuestions.push({ ...currentQuestion, status: 'skipped' });
         this.markClueAsSeen(this.state.selectedCategory, currentQuestion.title);
+
         this.dom.displays.clueText.innerHTML = `<span class="clue-feedback incorrect">Skipped! The answer was: ${this.state.currentAnswer}</span>`;
-        
+
         this.disableKeyboard();
         this.dom.buttons.skipBtn.disabled = true;
         this.dom.containers.continueOverlay.classList.add('visible');
@@ -636,12 +664,15 @@ class PlotTwistedGame {
         this.playSound('skip');
     }
 
-    updateGameStatusDisplay() {
-        this.dom.displays.gameProgressDisplay.textContent = `Question: ${this.state.currentQuestionIndex + 1} / ${this.state.gameQuestions.length}`;
+    updateGameStatusDisplay(force = false) {
+        // Because we incremented currentQuestionIndex at the end of nextQuestion(),
+        // the "current" visible question number equals currentQuestionIndex.
+        const cur = Math.min(this.state.currentQuestionIndex, this.state.gameQuestions.length);
+        this.dom.displays.gameProgressDisplay.textContent = `Question: ${cur} / ${this.state.gameQuestions.length}`;
         this.dom.displays.gameScoreDisplay.textContent = `Score: ${this.state.totalScore}`;
         this.dom.buttons.skipBtn.disabled = this.state.isRoundOver;
 
-        // Update Strikes Display
+        // Strikes UI
         const strikesContainer = this.dom.displays.strikesDisplay;
         strikesContainer.innerHTML = '';
         for (let i = 0; i < 3; i++) {
@@ -652,12 +683,37 @@ class PlotTwistedGame {
             }
             strikesContainer.appendChild(icon);
         }
+
+        // Category pill text for daily mode
+        if (this.state.currentGameMode === 'daily' && this.dom.displays.categoryDisplay) {
+            this.dom.displays.categoryDisplay.textContent = 'Daily';
+        }
+    }
+
+    // On final strike: reveal answer, then end game (no continue button)
+    revealAnswerAndEnd() {
+        this.disableKeyboard();
+        this.state.isRoundOver = true;
+
+        const currentQuestion = this.state.gameQuestions[this.state.currentQuestionIndex - 1];
+        // Record as missed (distinct from skipped)
+        this.state.playedQuestions.push({ ...currentQuestion, status: 'missed' });
+
+        // Show the answer briefly
+        if (this.dom.displays.clueText) {
+            this.dom.displays.clueText.innerHTML =
+                `<span class="clue-feedback incorrect">Out of strikes! Answer: ${this.state.currentAnswer}</span>`;
+        }
+
+        setTimeout(() => {
+            this.endGame(true); // wasQuit=true keeps "Game Over" title
+        }, 1500);
     }
 
     endGame(wasQuit = false) {
         this.dom.displays.gameOverTitle.textContent = wasQuit ? "Game Over" : "Your Final Cut";
-        
-        if(this.state.currentGameMode === 'daily') {
+
+        if (this.state.currentGameMode === 'daily') {
             localStorage.setItem('pt_daily_played_' + new Date().toDateString(), 'true');
             this.checkDailyChallengeStatus();
             const correctCount = this.state.playedQuestions.filter(q => q.status === 'correct').length;
@@ -675,8 +731,8 @@ class PlotTwistedGame {
         const breakdownList = this.dom.displays.scoreBreakdown;
         breakdownList.innerHTML = '';
         this.state.playedQuestions.forEach(q => {
-            const li = document.createElement('li');
             const points = q.status === 'correct' ? '+100' : '+0';
+            const li = document.createElement('li');
             li.innerHTML = `<span>${q.title}</span><span>${points}</span>`;
             breakdownList.appendChild(li);
         });
@@ -684,7 +740,7 @@ class PlotTwistedGame {
         this.showScreen('gameOver');
         this.playSound('endGame');
     }
-    
+
     playAgain() {
         this.showScreen('category');
     }
@@ -695,17 +751,19 @@ class PlotTwistedGame {
         this.state.playedQuestions.forEach(q => {
             const item = document.createElement('div');
             item.className = 'credit-item';
-            const statusClass = q.status === 'correct' ? 'status-correct' : 'status-incorrect';
+            const good = q.status === 'correct';
+            const statusClass = good ? 'status-correct' : 'status-incorrect';
+            const statusLabel = good ? 'CORRECT' : (q.status === 'skipped' ? 'SKIPPED' : 'MISSED');
             item.innerHTML = `
                 <div class="title">${q.title}</div>
                 <div class="clue">"${q.clue}"</div>
-                <div class="${statusClass}">${q.status.toUpperCase()}</div>
+                <div class="${statusClass}">${statusLabel}</div>
             `;
             creditsContainer.appendChild(item);
         });
         this.showScreen('credits');
     }
-    
+
     shuffleArray(array) {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -713,7 +771,7 @@ class PlotTwistedGame {
         }
         return array;
     }
-    
+
     setupSounds() {
         if (window.Tone && Object.keys(this.synths).length === 0) {
             this.synths.click = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination();
@@ -727,12 +785,12 @@ class PlotTwistedGame {
 
     playSound(sound) {
         if (!this.settings.sound || !window.Tone) return;
-        
+
         this.setupSounds();
         if (!this.synths[sound]) return;
-        
+
         Tone.start().then(() => {
-            switch(sound) {
+            switch (sound) {
                 case 'click': this.synths.click.triggerAttackRelease('C5', '8n'); break;
                 case 'correct': this.synths.correct.triggerAttackRelease('G5', '8n'); break;
                 case 'incorrect': this.synths.incorrect.triggerAttackRelease('C3', '8n'); break;
@@ -746,7 +804,7 @@ class PlotTwistedGame {
     toggleSpeechRecognition() {
         alert('Speech recognition coming soon!');
     }
-    
+
     // --- DAILY CHALLENGE ---
     checkDailyChallengeStatus() {
         try {
@@ -774,6 +832,11 @@ class PlotTwistedGame {
             this.resetGameState();
             this.state.gameQuestions = this.getDailyQuestions();
             this.state.currentQuestionIndex = 0;
+
+            if (this.dom.displays.categoryDisplay) {
+                this.dom.displays.categoryDisplay.textContent = 'Daily';
+            }
+
             this.showScreen('game');
             this.nextQuestion();
             this.playSound('start');
@@ -785,9 +848,8 @@ class PlotTwistedGame {
     getDailyQuestions() {
         const date = new Date();
         this._randomSeed = date.getFullYear() * 10000 + (date.getMonth() + 1) * 100 + date.getDate();
-        
+
         let shuffled = [...this.allClues];
-        // Use the seeded random number generator to shuffle
         for (let i = shuffled.length - 1; i > 0; i--) {
             const j = Math.floor(this.seededRandom() * (i + 1));
             [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
@@ -810,7 +872,7 @@ class PlotTwistedGame {
         const today = new Date();
         const dateString = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
         const shareText = `Plot Twisted - Daily Challenge ${dateString}\n\nI got ${correctCount}/10 correct!\n\n🎬 ${emojiGrid}\n\nCan you beat my score?`;
-        
+
         if (navigator.clipboard) {
             navigator.clipboard.writeText(shareText).then(() => {
                 this.showCopiedFeedback();
@@ -855,7 +917,7 @@ class PlotTwistedGame {
             this.dom.buttons.shareScoreBtn.disabled = false;
         }, 2000);
     }
-    
+
     // --- SMART SHUFFLE LOGIC ---
     getSeenClues(category) {
         try {
@@ -920,34 +982,3 @@ class PlotTwistedGame {
     window.visualViewport.addEventListener('scroll', updateKeyboardVars);
   }
 })();
-
-/* === Handle Game Over with Answer Reveal === */
-function handleGameOver(correctAnswer) {
-  const clueText = document.getElementById('clueText');
-
-  // Show the answer briefly
-  if (clueText) {
-    clueText.textContent = `Answer: ${correctAnswer}`;
-    clueText.style.color = "var(--primary-color, #ff4444)";
-  }
-
-  // After 2 seconds, go to Game Over screen
-  setTimeout(() => {
-    showGameOver(correctAnswer);
-  }, 2000);
-}
-
-function showGameOver(correctAnswer) {
-  const gameOverScreen = document.getElementById('gameOverScreen');
-  const scoreBreakdown = document.getElementById('scoreBreakdown');
-
-  // Add missed answer to the end credits list
-  if (scoreBreakdown && correctAnswer) {
-    const li = document.createElement('li');
-    li.textContent = `Missed Answer: ${correctAnswer}`;
-    scoreBreakdown.appendChild(li);
-  }
-
-  gameOverScreen.classList.add('active');
-}
-
