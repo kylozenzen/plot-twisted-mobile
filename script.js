@@ -333,7 +333,7 @@ startGame() {
 }
 
 
-    this.state.gameQuestions = this.shuffleArray(availableClues).slice(0, this.settings.numRounds);
+   this.state.gameQuestions = this.shuffleArray(availableClues).slice(0, this.settings.numRounds);
     if (this.state.gameQuestions.length === 0) {
       alert('Not enough questions in this category!');
       return;
