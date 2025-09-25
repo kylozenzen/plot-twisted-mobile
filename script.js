@@ -225,20 +225,27 @@ class PlotTwistedGame {
         }
     }
 
-    showScreen(screenName) {
-        Object.values(this.dom.screens).forEach(screen => screen.classList.remove('active'));
-        if (this.dom.screens[screenName]) {
-            this.dom.screens[screenName].classList.add('active');
-            this.state.currentScreen = screenName;
-        }
-        if (screenName === 'category') {
-            this.state.selectedCategory = null;
-            this.renderCategoryScreen();
-        }
-        if (screenName !== 'game' && this.state.currentGameMode === 'blitz') {
-            this.stopBlitz();
-        }
+showScreen(screenName) {
+    // Safely remove .active from only the elements that exist
+    const screens = Object.values(this.dom.screens).filter(Boolean);
+    screens.forEach(screen => screen.classList.remove('active'));
+
+    // Activate target if present
+    const target = this.dom.screens[screenName];
+    if (target) {
+        target.classList.add('active');
+        this.state.currentScreen = screenName;
+    } else {
+        console.warn(`[showScreen] Screen "${screenName}" not found`);
     }
+
+    // Reset & render category screen when entering that view
+    if (screenName === 'category') {
+        this.state.selectedCategory = null;
+        this.renderCategoryScreen();
+    }
+}
+
 
     renderCategoryScreen() {
         const grid = this.dom.containers.categoryGrid;
