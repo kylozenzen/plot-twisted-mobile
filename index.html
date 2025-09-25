@@ -12,11 +12,13 @@
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
   <!-- Styles -->
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
+
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
 </head>
 <body>
   <div class="app-container">
+
     <!-- START -->
     <div id="startScreen" class="screen active">
       <div class="screen-content">
@@ -33,7 +35,7 @@
       </div>
     </div>
 
-    <!-- DAILY (placeholder) -->
+    <!-- DAILY -->
     <div id="dailyChallengeScreen" class="screen">
       <div class="screen-content">
         <div class="logo logo-small">Daily Challenge</div>
@@ -42,7 +44,7 @@
       </div>
     </div>
 
-    <!-- MORE MODES (placeholder) -->
+    <!-- MORE MODES -->
     <div id="moreModesScreen" class="screen">
       <div class="screen-content">
         <div class="logo logo-small">More Modes</div>
@@ -97,16 +99,13 @@
           </ul>
 
           <h3>Daily Challenge</h3>
-          <p>Test your skills with a unique set of 10 questions that are the same for everyone each day. You only get one attempt per day! After you finish, you'll get a special shareable summary of your results to compare with friends.</p>
+          <p>Test your skills with a unique set of 10 questions. One attempt per day. Share your score when you’re done!</p>
 
           <h3>Game Controls</h3>
           <ul>
-            <li><b>Skip:</b> Don’t know the answer? Use the “Skip” button to forfeit the question and move to the next one.</li>
-            <li><b>Settings:</b> Use Settings to toggle Light, Dark, or Neon themes, adjust game length, and turn sound on/off.</li>
+            <li><b>Skip:</b> Use "Skip" to forfeit the question and move on.</li>
+            <li><b>Settings:</b> Toggle themes, sounds, and game length.</li>
           </ul>
-
-          <h3>About the Developer</h3>
-          <p>You can connect with the Developer <a href="https://x.com/Ben_Soup" target="_blank" style="color: var(--primary-color);">Ben Campbell</a> on X @Ben_Soup</p>
         </div>
         <button class="btn" id="howToPlayBackBtn">Back</button>
       </div>
@@ -119,7 +118,7 @@
         <div class="category-grid"></div>
         <div class="scroll-indicator">Scroll for more <i class="ph ph-caret-down"></i></div>
         <div class="bottom-bar">
-          <button class="btn" id="playBtn" disabled>PLAY</button>
+          <button class="btn" id="playBtn">PLAY</button>
           <button class="btn secondary" id="categoryBackToHomeBtn">BACK</button>
         </div>
       </div>
@@ -135,20 +134,25 @@
           <button class="btn btn-small" id="finishGameBtn">Quit</button>
         </div>
       </div>
+      <div class="category-pill" id="categoryPill" aria-hidden="true"></div>
 
       <div id="game-content-area">
         <div class="screen-box">
           <div id="clueText"></div>
         </div>
+
         <div class="action-btn-row">
           <button class="btn" id="speakBtn"><span>Speak</span></button>
           <button class="btn" id="skipBtn">Skip</button>
         </div>
+
         <div class="word-display"></div>
       </div>
 
       <div id="keyboard-area">
         <div id="keyboard" class="keyboard"></div>
+
+        <!-- CONTINUE overlay: appears ONLY after correct or skip -->
         <div id="continue-overlay">
           <button class="btn" id="continueBtn">Continue</button>
         </div>
@@ -171,7 +175,7 @@
           <button class="btn secondary" id="chooseNewCategoryBtn">New Category</button>
           <button class="btn secondary" id="viewCreditsBtn">View Credits</button>
           <button class="btn secondary" id="gameOverBackToHomeBtn">Main Menu</button>
-          <button class="btn" id="shareScoreBtn" style="display: none;">Share Score</button>
+          <button class="btn" id="shareScoreBtn" style="display:none;">Share Score</button>
         </div>
       </div>
     </div>
@@ -199,13 +203,11 @@
         </div>
       </div>
     </div>
+
   </div>
 
-  <!-- IMPORTANT: include your clues first -->
-  <!-- Paste your big clues array into clues.js as:  const cluesJSON = [ ... ]; -->
+  <!-- IMPORTANT: load clues first, then game script -->
   <script src="clues.js"></script>
-
-  <!-- Main game script -->
   <script src="script.js"></script>
 </body>
 </html>
