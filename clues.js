@@ -1,11 +1,7 @@
-// Keep your big clues list here in this file.
-// Example structure:
-// const cluesJSON = [ { "title": "Finding Nemo", "clue": "Helicopter parent...", "category": "Family", "emoji": "🐠" }, ... ];
+window.cluesJSON = [
 
-// NOTE: Replace this file's contents with your full clues list.
-const cluesJSON = [
+
   { "title": "Finding Nemo", "clue": "Helicopter parent commits multiple felonies trying to retrieve his runaway son with a lucky blue amnesiac.", "category": "Family", "emoji": "🐠" },
-  const familyClues = [
   { "title": "Encanto", "clue": "Gifted family singles out their only un-magical member for vibes management.", "category": "Family", "emoji": "🐠" },
   { "title": "Finding Nemo", "clue": "Helicopter parent ignores maritime law to retrieve a truant guppy.", "category": "Family", "emoji": "🐠" },
   { "title": "Finding Dory", "clue": "A blue goldfish proves memory is optional for leadership.", "category": "Family", "emoji": "🐠" },
