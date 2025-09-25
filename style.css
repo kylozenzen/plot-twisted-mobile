@@ -317,3 +317,41 @@ body.dark-mode .receipt-total { border-top-color: #555; }
     margin-top: 20px;
     flex-shrink: 0;
 }
+
+
+/* === COMPACT MOBILE SPACING FIX === */
+:root {
+  --keyboard-lift: 12px; /* adjust up/down if you want tighter/looser */
+}
+
+#game-content-area {
+  /* remove the extra need to scroll by ensuring it accounts for the keyboard area */
+  padding-bottom: 80px; /* space for word + actions before keyboard */
+  flex: 1 1 auto;
+  overflow-y: auto;
+}
+
+.word-display {
+  margin-bottom: 12px; /* tighter gap above keyboard */
+}
+
+.action-btn-row {
+  margin-bottom: 12px; /* reduced from 20px */
+}
+
+#keyboard-area {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: env(safe-area-inset-bottom);
+  transform: translateY(calc(-1 * var(--keyboard-lift)));
+  z-index: 1000;
+  background: var(--bg-color);
+}
+
+/* Auto-resize clue box instead of fixed height */
+#clueText {
+  max-height: 30vh;     /* never too tall */
+  overflow-y: auto;     /* scroll inside if clue is very long */
+}
+
